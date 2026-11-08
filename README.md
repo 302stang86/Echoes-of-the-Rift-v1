@@ -28,6 +28,7 @@ Official documentation: https://docs.github.com/en/pages/getting-started-with-gi
 - index.html — title, player name, new game, continue
 - story.html — four prologue scenes illustrated with all 20 panels from the first sheet
 - world.html — 13 interactive travel destinations, gathering, scavenging, investigations, wildlife encounters
+- scene.html — tappable exploration scenes, object searches, clues, and permanent discoveries
 - camp.html — shelter, warmth, integrity, resting, Maya assignments and transmitter defenses
 - crafting.html — 14 recipes, material costs and progression locks
 - inventory.html — resources, equipment, save export and import
@@ -65,7 +66,7 @@ Progress autosaves in localStorage under echoes-rift-v1. It is specific to the b
 
 ## Development and checks
 
-Run `node --test tests/*.test.cjs` to verify progression and survival rules. Thirty-one automated tests cover import validation, gathering limits, carry capacity, Maya assignments, cold/fire/rest, battery renewability, six-quest progression, combat and death. The campaign rule test uses supplied resource fixtures; it is not a full survival-balance playthrough. Browser smoke testing verified naming, the prologue, travel, companion assistance, gathering, crafting the shelter, quest advancement and illustrations. The interactive-map update was checked for selection, lock messages, zoom, label visibility, travel, gathering, and a 390px-wide responsive layout. Added automated checks cover destination coordinates, unlock requirements, resource yields and zoom/pan geometry.
+Run `node --test tests/*.test.cjs` to verify progression and survival rules. Forty-five automated tests cover import validation, gathering limits, carry capacity, Maya assignments, cold/fire/rest, battery renewability, six-quest progression, combat and death. The campaign rule test uses supplied resource fixtures; it is not a full survival-balance playthrough. Browser smoke testing verified naming, the prologue, travel, companion assistance, gathering, crafting the shelter, quest advancement and illustrations. The interactive-map update was checked for selection, lock messages, zoom, label visibility, travel, gathering, and a 390px-wide responsive layout. Added automated checks cover destination coordinates, unlock requirements, resource yields and zoom/pan geometry.
 
 This initial version is intentionally expandable. A phone-width browser preview was checked; physical iPhone/Safari gesture testing has not been performed. No multiplayer, cloud saves, paid assets or backend services are included.
 
@@ -136,3 +137,45 @@ Open Cheats in the navigation and enter the exact, case-sensitive access code **
 Disable ongoing cheats turns off all toggles. Instant supplies, crafted items, restored stats, relationship gains, completed progress and the used-save marker remain. Lock menu gates access without changing active effects. Cheats are also accessible from a combat encounter. Older saves need no reset and have no cheat effects by default.
 
 Seven additional automated checks verify exact-code access, locking, survival and combat effects, free crafting requirements, map travel, required encounters, instant actions and save persistence. Browser checks verified wrong-code rejection, successful unlock, toggles, free crafting, disabling and re-locking in an isolated test save.
+
+## Scene exploration, audio and manual saving
+
+Created by **Mitch Peebles** appears directly below the title. The author metadata is also included on each page. Title buttons now stack on desktop as well as phones. Larger touch targets and notch/home-indicator safe-area padding are retained.
+
+### Searchable scenes
+
+Choose **Explore this location** from the map, or **Explore current location** on the Camp page. All 13 destinations have scene definitions, with 44 permanent discoveries in total. A new four-panel illustrated atlas supplies the Mustang wreck, forest, camp and rift environments; other scenes use the supplied wildlife artwork.
+
+Tap a numbered object or use the object list, then choose its search/read action. Merely selecting an object is free. Supply searches generally take one game hour; lore discoveries take no time. Each object awards its find once and stays recorded across navigation, reloads, manual saves, and exported saves. Discoveries and clues can be read in the Journal under **The things we found**.
+
+- Broken Ridge: bring Maya, pry open the hood, then recover the alternator. Its salvage flag feeds the existing Iron & Flint quest. An alternator already recovered through ordinary gathering cannot be awarded twice.
+- Forest/grove: Maya reveals hidden medicinal herbs and can offer clues.
+- Rift/other ruins: a switched-on, charged flashlight reveals faint inscriptions.
+- Camp/river: inspect the shelter journal, baskets, stones and fishing gear.
+- Every object’s supply rewards respect expedition carry capacity. Camp finds do not occupy expedition slots. Synergy and Maya’s committed support can apply to successful field searches.
+
+On phone-sized screens, tapping an object brings its details and action into view. The numbered markers and the text list provide alternative ways to select the same objects.
+
+### Audio controls
+
+Open **Audio** in the navigation. Audio starts disabled. Check **Enable audio** to start a soft, original synthesized ambient pad with occasional musical notes and filtered environmental ambience. Location changes adjust its character. Selection, crafting and discovery effects are synthesized locally. This is a lightweight starter sound design, without downloaded songs, paid audio services, or API keys.
+
+**Mute all** silences every category without changing the mix. Independent 0–100% sliders control **Master**, **Music**, **Ambience**, **Sound effects**, and **Voice**. Preferences persist on the current browser separately from game saves. Disabling audio stops playback. Hidden pages suspend audio; returning to a page can require another interaction to resume sound.
+
+Optional **Read discoveries and Maya’s clues aloud** uses available device/browser speech voices. This also supports Maya’s relationship dialogue. It is narration, not a recorded character performance. Voice output depends on device/browser voice availability. Test effects and Test voice controls are included; narration is off by default. Text remains fully usable with all audio disabled or muted.
+
+For later audio production, the recommended direction is quiet piano/drones for exploration, river/wind/fire ambience, restrained material-specific effects, and selective Maya voice lines at major scenes. The current soundtrack is a synthesized starter rather than that complete recorded mix.
+
+### Save game and Load saved game
+
+Autosave still runs after actions. A visible **Save game** button near the game clock creates an independent manual checkpoint on this browser/device. Save/load controls are also on the Pack page. The title shows **Load saved game** when a valid checkpoint exists. Loading asks before replacing current autosave progress.
+
+The checkpoint preserves inventory, quests, relationship choices, discovered objects, cheats and story progress. Updating autosave does not overwrite it; choosing Save game again updates the manual checkpoint. Downloadable JSON export/import remains available in Pack for backups or device transfers. The manual save is not a cloud account and does not sync between devices. Clearing browser data can remove local saves; use exported backups for durable copies.
+
+**Firestore is not required** for this version. The game remains a static GitHub Pages project with no server setup. Cross-device account-based synchronization would require a separate cloud-save integration.
+
+### Verification of this update
+
+Fourteen additional automated checks cover scene coverage and object placement, one-time rewards, search requirements, unique-alternator handling, Maya/flashlight reveals, discovery serialization, combat/death restrictions, Synergy, independent audio volumes, master mute, manual checkpoint restoration, autosave independence and invalid/unavailable storage. All 45 automated checks pass.
+
+Browser verification covered the camp discovery, staged hood/alternator search, persisted finds, manual saving/loading, audio activation and volume controls, the author credit, and a 390px-wide phone layout with no horizontal page overflow. The browser reported successful audio-context activation; physical iPhone audio output and Safari behavior still need a real-device check.

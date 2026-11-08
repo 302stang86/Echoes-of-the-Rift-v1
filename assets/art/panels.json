@@ -398,5 +398,53 @@
       338,
       123
     ]
+  },
+  "scene-wreck": {
+    "title": "Mustang wreck at Broken Ridge",
+    "sheet": "exploration-scenes.png",
+    "box": [
+      0,
+      0,
+      768,
+      512
+    ],
+    "width": 1536,
+    "height": 1024
+  },
+  "scene-forest": {
+    "title": "Forest floor with searchable plants and fallen wood",
+    "sheet": "exploration-scenes.png",
+    "box": [
+      768,
+      0,
+      768,
+      512
+    ],
+    "width": 1536,
+    "height": 1024
+  },
+  "scene-camp": {
+    "title": "River camp with shelter, fire ring, basket, and fishing gear",
+    "sheet": "exploration-scenes.png",
+    "box": [
+      0,
+      512,
+      768,
+      512
+    ],
+    "width": 1536,
+    "height": 1024
+  },
+  "scene-rift": {
+    "title": "Rift clearing with monolith and modern debris",
+    "sheet": "exploration-scenes.png",
+    "box": [
+      768,
+      512,
+      768,
+      512
+    ],
+    "width": 1536,
+    "height": 1024
   }
 }
