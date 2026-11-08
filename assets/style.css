@@ -133,3 +133,6 @@ select{font:inherit;color:var(--ink);background:#0a1b34;border:1px solid var(--l
 
 .recipe.mine{align-self:start}
 .dusk{color:#ffcf7a;font-style:normal;font-size:12px}.gl{display:inline-flex}.gear-svg{display:block}
+
+.region-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.region-tabs button{min-height:44px;flex:1}.region-caption{padding:0 4px;margin-bottom:8px}.map-col .map{overflow:hidden}.map-col .pin{min-height:34px}
+@media(max-width:600px){.region-tabs button{font-size:12px;padding:10px 8px}.map-col .pin{font-size:9px;padding:5px 6px;min-height:30px}}

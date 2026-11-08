@@ -11,6 +11,8 @@
   const st = (d, p) => `<path d="${d}" fill="none" stroke="${p.trim}" stroke-width="1.2" stroke-dasharray="2.5 2.5" opacity=".85"/>`;
   const body = (d, p, extra = "") => `<path d="${d}" fill="${p.main}" stroke="${p.dark}" stroke-width="2" stroke-linejoin="round"/>${extra}`;
   const ICONS = {
+    mask: (p) => `<path d="M10 21 Q32 7 54 21 L48 45 Q32 59 16 45Z" fill="#a18a58" stroke="#382f22" stroke-width="3"/><path d="M17 25 L47 42 M17 33 L42 49 M23 19 L50 35 M15 40 L40 18 M23 48 L49 23" stroke="#514c33" stroke-width="2"/><path d="M10 25 Q0 35 15 42 M54 25 Q64 35 49 42" fill="none" stroke="#dbcaa2" stroke-width="2"/>`,
+    compass: () => `<circle cx="32" cy="32" r="24" fill="#423d35" stroke="#d5bd83" stroke-width="3"/><circle cx="32" cy="32" r="18" fill="#172938" stroke="#987652"/><path d="M32 12 L38 32 32 52 26 32Z" fill="#8fd8e1" stroke="#dfebd9"/><circle cx="32" cy="32" r="4" fill="#d8bd7e"/>`,
     shirt: (p, tier) => body("M19 10 L27 12 L32 19 L37 12 L45 10 L57 23 L50 32 L44 28 L45 53 L40 56 L34 54 L28 57 L20 54 L19 28 L14 32 L7 23 Z", p, `<path d="M28 13 Q32 18 36 13" fill="none" stroke="${p.dark}" stroke-width="2"/>${st("M23 50 H41", p)}${tier > 1 ? st("M32 20 V50", p) : ""}${tier === 3 ? fur([[24, 55], [32, 56], [40, 55], [10, 27, 4], [54, 27, 4]], p) : ""}`),
     pants: (p, tier) => body("M19 8 L32 10 L45 8 L46 30 L48 55 L41 58 L35 56 L32 31 L29 56 L23 58 L16 55 Z", p, `<rect x="19" y="8" width="26" height="6" fill="${p.dark}" opacity=".6"/>${st("M32 14 V30", p)}${st("M22 50 H28", p)}${st("M36 50 H43", p)}${tier === 3 ? fur([[22, 57], [29, 57], [38, 57], [44, 57]], p) : ""}`),
     shoes: (p, tier) => body("M22 8 L38 10 L39 32 L52 38 Q58 41 57 49 L53 54 L21 53 L19 46 Z", p, `<path d="M21 49 Q39 54 56 49 L54 54 H22 Z" fill="${p.dark}"/>${st("M23 47 Q39 51 53 47", p)}${st("M26 18 H34", p)}${st("M26 24 H34", p)}${tier > 1 ? `<path d="M23 12 H37" stroke="${p.light}" stroke-width="2"/>` : ""}${tier === 3 ? fur([[24, 8], [30, 7], [36, 8]], p) : ""}`),
@@ -30,10 +32,11 @@
   let serial = 0;
   function svg(item, px) {
     const fam = item.fam || item, tier = item.tier || 1, p = PAL[tier] || PAL[1];
-    const draw = ICONS[fam]; if (!draw) return "";
+    const aliases = {marshboots:"shoes", ventmask:"mask", riftcompass:"compass", obsidianspear:"spear", expeditioncoat:"coat"};
+    const draw = ICONS[aliases[fam] || fam]; if (!draw) return "";
     const s = px || 40;
     const grain = `<path d="M8 19 L54 24 M5 29 L58 34 M8 40 L55 45 M12 51 L49 55" fill="none" stroke="${p.dark}" stroke-width=".65" opacity=".3"/><path d="M16 13 L20 15 M41 35 L45 37 M27 45 L31 47" stroke="${p.light}" stroke-width="1" opacity=".6"/>`;
-    let shape = draw(p, tier);
+    let shape = draw(fam === "obsidianspear" ? {...p, main:"#343245"} : p, fam === "expeditioncoat" ? 3 : fam === "obsidianspear" ? 3 : tier);
     // A local mask textures only the object silhouette. Each SVG owns its IDs.
     const id = "gear-art-" + (++serial);
     const lacing = ["shirt", "pants", "shoes", "gloves", "coat"].includes(fam)

@@ -14,7 +14,7 @@ One screen:
 
 ## What changed from v1
 
-- No carry slots. Every gather action takes 1 hour and 15 energy. Each gathering spot gives 3 harvests per day and refreshes at midnight (constant `DAILY_LIMIT` in game.js).
+- No carry slots. Every gather action takes 20 minutes and 8 energy (12 at night). Each gathering spot gives 3 harvests per day and refreshes at midnight (constant `DAILY_LIMIT` in game.js).
 - Energy (0 to 100). Gather 15, search 8 (3 for lore), travel 10, build 8, fill water 5, trail puzzle 20, defend 15. Sleep in the lean-to restores all energy; a rest by the fire restores 20. Going home to camp is always allowed, even at 0 energy.
 - Search the area refreshes every day. The first search of a spot always pays; later days give random amounts and sometimes nothing. Lore finds are one-time.
 - Animals can interrupt gathering (15% per harvest) once the first shelter is built. Maya often warns you in time.
@@ -54,13 +54,18 @@ Autosave key `echoes-rift-v2`; manual save is separate. v1 saves are not compati
 - Animals drop raw meat, hides, claws and sometimes a pelt. Collect them after the fight. Tan hides into leather at a tanning rack, then craft clothing in the Gear workshop.
 - Gear: shirt, pants, shoes, gloves, coat, tool and weapon slots for you, Maya and every survivor (children can wear clothes only). Clothing and tools upgrade through tiers. Heavy coats on you and Maya also satisfy the Glacier ravine coat requirement. Open Gear and equipment, or Check on survivors, at camp.
 
-## Update 6: curfew, forced sleep, gear art
-- Be back at camp by 10 PM. A warning appears at 8 PM. If you are still out at 10 PM you are dragged home cold (-10 warmth). You cannot leave camp when the trip would end after dusk.
-- 10 PM to midnight at camp: only check on survivors, gear, craft, talk, or rest. At midnight you fall asleep for 8 hours and wake at 8 AM with health and energy restored. Rest by the fire to pass time and gain energy.
-- The cheat menu has "No 10 PM curfew or forced sleep" for testing.
-- Heavy winter coats are no longer a recipe. Coats are gear: make a Light coat, upgrade it to a Heavy coat, and equip one on you and one on Maya. The Glacier and ravine requirements use these.
-- Hunt game (forest, grove, river) needs a spear or axe equipped and brings meat, hides and sometimes claws.
-- All gear has drawn vector icons (assets/gear-icons.js). A reference sheet is in assets/art/gear-sheet.png.
+## Time and rest (release 4)
+- Travel durations remain unchanged. Gathering, fishing and hunting take 20 minutes; every object search and water refill takes 10 minutes; crafting, builds, upgrades and other work take 30 minutes. Talking, equipping and assigning chores take no time.
+- No automatic curfew, forced return or midnight sleep. The clock displays hours and minutes.
+- Night (7 PM–6 AM) costs 50% more energy for travel and gathering, plus 2 energy per awake hour. Return to camp is available even with no energy.
+- Rest by the fire for 30 minutes, 1 hour, or until dawn. Sleep explicitly until the next 6 AM. Food, water, fires and survivors continue to consume resources while resting.
+- A nearby person always has an enabled Investigate nearby person action. Active fights have a recovery action too. Resolve the encounter to resume other work.
 
 ## Graphics release 2
-All 24 gear tiers now use textured prehistoric survival artwork. See EXPANSION-PROPOSAL.md for the proposed second map (not implemented). Release numbers live in VERSION; run `node scripts/bump-version.cjs` once per future release to increment by one. Save schema versions are independent.
+All 24 gear tiers now use textured prehistoric survival artwork. See FAR-SHORE-DESIGN.md for the expansion design. Release numbers live in VERSION; run `node scripts/bump-version.cjs` once per future release to increment by one. Save schema versions are independent.
+
+## Release 3 — The Far Shore
+The second map is now playable after surviving The Long Winter. See RELEASE-3.md for unlocks, gear, hazards, save compatibility and validation.
+
+## Release 4 validation
+111 automated tests pass. Desktop browser checks verified minute display, rest choices and explicit sleep to 6 AM. Existing saves migrate with minute set to zero.

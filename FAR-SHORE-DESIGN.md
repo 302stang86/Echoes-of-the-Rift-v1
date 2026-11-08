@@ -1,6 +1,6 @@
-# Echoes of the Rift — The Far Shore (proposal)
+# Echoes of the Rift — The Far Shore
 
-Not implemented in this graphics update.
+Implemented in release 3. The design notes below describe the expansion direction. See RELEASE-3.md for the delivered mechanics.
 
 Unlock on the first Winter-to-Spring transition after the winter-survival quest begins, using the existing winterSurvived flag. Reveal a thawed mountain pass and a journal discovery. Do not reset the current camp, gear, survivors or inventory. Keep travel between both maps available. Let the existing rift gate provide a later shortcut rather than making the map depend on finishing the game.
 

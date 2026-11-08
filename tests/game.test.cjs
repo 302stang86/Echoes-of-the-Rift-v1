@@ -35,7 +35,7 @@ test("invalid saves are rejected", () => {
 test("every place offers only its own actions", () => {
   const s = newGame();
   const labels = (id) => { s.loc = id; return R.actionsFor(s).map((a) => a.label); };
-  assert.ok(labels("camp").includes("Sleep in the lean-to"));
+  assert.ok(labels("camp").includes("Sleep until dawn"));
   assert.ok(!labels("camp").some((l) => /^Gather/.test(l)));
   assert.ok(labels("forest").includes("Gather timber and ferns"));
   assert.ok(labels("river").includes("Fish the river"));
@@ -159,13 +159,11 @@ test("Maya at camp fishes or forages by herself each midnight", () => {
   assert.ok(!u.inv.herb, "no passive help while she travels with you");
 });
 
-test("rest needs the lean-to and restores health", () => {
-  const s = newGame();
-  s.health = 40;
-  assert.match(R.act(s, "rest", "rest"), /lean-to/);
-  s.flags.shelter = true;
-  R.act(s, "rest", "rest");
-  assert.ok(s.health >= 65);
+test("sleep until dawn restores energy with a shelter; rough rest remains available", () => {
+ const s = newGame(); s.hour = 23; s.health = 40;
+ assert.match(R.act(s, "rest", "rest"), /6:00 AM/); assert.equal(s.hour, 6);
+ s.flags.shelter = true; s.hour = 23; s.health = 40; s.food = s.water = s.warmth = 100;
+ R.act(s, "rest", "rest"); assert.ok(s.health >= 65); assert.equal(s.energy,100);
 });
 
 test("crafting spends materials and builds the shelter, advancing the first quest", () => {
@@ -705,40 +703,25 @@ test("older saves gain gear, drop and sickness fields", () => {
 /* ---- update 6: curfew, forced sleep, hunting ---- */
 const dusk = () => { const s = R.fresh("Leo"); s.cheats.noCurfew = false; s.cheats.safeTravel = true; s.flags.shelter = true; s.shelters = [{ level: 0 }]; s.inv.log = 20; return s; };
 
-test("you must be back at camp by 10 PM or you are dragged home cold", () => {
-  const s = dusk(); s.loc = "forest"; s.hour = 19; s.warmth = 80;
-  R.tick(s, 1); assert.match(s.log.join(" "), /Be back at camp by 10 PM/);
-  R.tick(s, 2); assert.equal(s.loc, "camp");
-  assert.ok(s.warmth < 80); assert.match(s.log.join(" "), /stumble back/);
-  const t = dusk(); t.loc = "forest"; t.hour = 20; t.warmth = 90; t.energy = 100;
-  assert.match(R.travel(t, "camp"), /Arrived/); assert.equal(t.loc, "camp");
-  assert.ok(!/stumble/.test(t.log.join(" ")), "walking home in time is fine");
+test("sunset warns, night travel remains available, midnight never forces return or sleep", () => {
+ const s=dusk();s.loc="forest";s.hour=18;s.food=s.water=s.warmth=100;
+ R.tick(s,1);assert.match(s.log.join(" "),/Sunset/);
+ R.tick(s,5);assert.equal(s.loc,"forest");assert.equal(s.hour,0);assert.equal(s.day,2);assert.ok(!s.notice);
+ assert.equal(R.travelLock(s,"grove"),"");
 });
-
-test("it is too late to head out after dusk", () => {
-  const s = dusk(); s.hour = 20;
-  assert.match(R.travel(s, "forest"), /too late/);
-  s.hour = 17; assert.match(R.travel(s, "forest"), /Arrived/);
-  s.hour = 20; assert.match(R.travel(s, "grove"), /Dusk is near/);
+test("night effort costs more energy and zero energy still permits returning home", () => {
+ const s=dusk();s.hour=20;assert.equal(R.actionEnergy(s,"travel"),6);assert.equal(R.actionEnergy(s,"gather"),12);
+ assert.match(R.travel(s,"forest"),/Arrived/);s.energy=0;assert.match(R.travel(s,"grove"),/Too tired/);
+ assert.match(R.travel(s,"camp"),/Arrived/);assert.equal(s.loc,"camp");
 });
-
-test("from 10 PM to midnight camp is limited to survivors, crafting, talking and rest", () => {
-  const s = dusk(); s.hour = 22;
-  const acts = R.actionsFor(s), blocked = (type) => acts.filter((a) => a.type === type).every((a) => a.disabled);
-  assert.ok(blocked("refill")); assert.ok(!blocked("talk") && !blocked("build") && !blocked("nap") && !blocked("rest"));
-  s.survivors.push({ id: "a", name: "Mara", sex: "F", child: false, health: 90, injured: false, sick: false, ill: 0, gear: {}, task: "idle", joined: 1 });
-  assert.ok(!R.actionsFor(s).find((a) => a.type === "survivors").disabled);
-  assert.match(R.act(s, "refill", "refill"), /too dark/i);
+test("camp work stays available at night and uses shorter durations", () => {
+ const s=dusk();s.hour=22;assert.ok(!R.actionsFor(s).find(a=>a.type==="refill").disabled);
+ R.act(s,"refill","refill");assert.equal(s.hour,22);assert.equal(s.minute,10);
 });
-
-test("at midnight you are forced into eight hours of sleep", () => {
-  const s = dusk(); s.hour = 23; s.day = 3; s.energy = 20; s.health = 50; s.food = s.water = s.warmth = 100; s.flags.fire = true;
-  R.act(s, "nap", "nap");
-  assert.equal(s.hour, 8); assert.equal(s.day, 4);
-  assert.equal(s.energy, 100); assert.ok(s.health >= 80);
-  assert.match(s.log.join(" "), /sleep until morning/);
-  const t = dusk(); t.hour = 18; t.energy = 10; R.act(t, "rest", "rest");
-  assert.equal(t.hour, 2, "ordinary sleep is not doubled"); assert.equal(t.energy, 100);
+test("midnight refreshes one day while sleep is explicitly until six", () => {
+ const s=dusk();s.hour=23;s.minute=50;s.flags.fire=true;s.inv.log=20;
+ R.tick(s,1/6);assert.equal(s.hour,0);assert.equal(s.minute,0);assert.equal(s.day,2);assert.equal(s.inv.log,18);
+ s.health=s.food=s.water=s.warmth=100;R.act(s,"rest","rest");assert.equal(s.hour,6);assert.equal(s.minute,0);assert.equal(s.day,2);assert.equal(s.energy,100);
 });
 
 test("resting by the fire skips time before dusk", () => {

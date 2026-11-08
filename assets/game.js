@@ -4,7 +4,7 @@
   const KEY = "echoes-rift-v2";
   const MANUAL_KEY = "echoes-rift-v2-manual";
 
-  const CURFEW = 22; // be back at camp by 10 PM
+  const CURFEW = 22; // legacy export; no automatic curfew in release 4
   const DAILY_LIMIT = 3; // gathers per area per day
   const ENERGY = { max: 100, gather: 8, search: 4, lore: 2, travel: 4, craft: 4, refill: 2, wolf: 6, bear: 6, ravine: 12, defend: 8, nap: 25 };
   const WILD_CHANCE = 0.15;
@@ -20,6 +20,7 @@
   const TASKS = { idle: "Resting", wood: "Gather wood", fish: "Fish", forage: "Forage food", fire: "Tend the fire", heal: "Tend the injured", hunt: "Hunt", tan: "Tan hides and sew", cook: "Cook and preserve", guard: "Guard the camp", water: "Haul water" };
 
   const names = {
+    obsidian: "Obsidian", basalt: "Basalt", resin: "Amber resin", reed: "Marsh reeds", heavyPelt: "Heavy pelts", ivory: "Shed ivory", sulfur: "Sulfur", moss: "Medicinal moss", riftGlass: "Rift glass",
     log: "Fallen logs", leaf: "Fern leaves", rope: "Rope", sapling: "Birch saplings",
     wire: "Copper wire", scrap: "Metal plates", stone: "Flint & stone", clay: "River clay",
     herb: "Medicinal herbs", berry: "Wild berries", fish: "Raw fish", food: "Preserved rations",
@@ -35,6 +36,7 @@
   };
 
   const recipes = {
+    mossdressing: { title: "Moss recovery dressing", desc: "Restore 50 health with Steamwood moss.", cost: { moss: 2, herb: 1 }, heal: 50, requires: "winterSurvived", art: "far-basin" },
     shelter: { title: "Riverbank lean-to", desc: "A safe place to sleep. Lets you rest at camp.", cost: { log: 10, leaf: 15, rope: 1 }, flag: "shelter", art: "frontier-08" },
     fire: { title: "Campfire", desc: "Warms the camp. Burns 2 logs each midnight.", cost: { stone: 4, log: 3 }, flag: "fire", art: "frontier-20" },
     fishing: { title: "Maya’s fishing rig", desc: "Lets you and Maya fish. Maya fishes daily while she stays at camp.", cost: { sapling: 5, wire: 2 }, flag: "fishing", gate: 1, art: "frontier-06" },
@@ -52,7 +54,7 @@
     riftgate: { title: "Rift gate", desc: "A stabilized stone arch. Opens the way to the far shore.", cost: { energy: 20, scrap: 15, wire: 12, stone: 20, log: 20 }, flag: "riftgate", requires: "transmitter", gate: 8, art: "frontier-14" },
     transmitter: { title: "Rift transmitter", desc: "An alternator, a battery and rift crystals: a signal across time.", cost: { alternator: 1, battery: 1, wire: 6, energy: 6, scrap: 6 }, flag: "transmitter", requires: "monolith", art: "frontier-13" },
   };
-  const requireNames = { shelter: "the lean-to", fire: "a campfire", smelter: "the smelter", walls: "the palisade", monolith: "the Rift Monolith", transmitter: "the transmitter", tanrack: "the tanning rack" };
+  const requireNames = { shelter: "the lean-to", fire: "a campfire", smelter: "the smelter", walls: "the palisade", monolith: "the Rift Monolith", transmitter: "the transmitter", winterSurvived: "surviving The Long Winter", tanrack: "the tanning rack" };
 
   const quests = [
     { title: "First Shelter", chapter: "I · Settling the wilderness", desc: "Build a lean-to beside the river.", art: "frontier-08" },
@@ -112,6 +114,43 @@
       gather: [{ id: "comb", label: "Comb the shore", loot: () => ({ clay: 4, stone: 2, wire: 1 }) }] },
   ];
   const place = (id) => places.find((p) => p.id === id);
+
+  const FAR_PLACES = [
+    { id: "ashen", name: "Ashen Foothills", x: 290, y: 240, label: "ASHEN", kind: "Volcanic foothills", desc: "A thawed pass leads into black hills. Loose scree and territorial cats make gathering risky.", hazard: "Rockfall", gather: [{ id: "quarry", label: "Quarry obsidian and basalt", loot: () => ({ obsidian: 3, basalt: 4 }) }] },
+    { id: "marsh", name: "Amber Marsh", x: 470, y: 570, label: "MARSH", kind: "Wetlands", desc: "Resin bleeds from ancient trees. Deep mud and biting insects drain warmth and energy. Resin-wrapped boots help.", hazard: "Deep mud", gather: [{ id: "reeds", label: "Gather resin and reeds", loot: () => ({ resin: 3, reed: 5 }) }] },
+    { id: "steppe", name: "Mammoth Steppe", x: 790, y: 220, label: "STEPPE", kind: "Herd country", desc: "Follow the migration markers from the foothills. Recover shed ivory and abandoned winter pelts without approaching the herds.", needsDiscovery: "migrationRoute", hazard: "Herd charge", gather: [{ id: "herd", label: "Recover shed ivory and pelts", loot: () => ({ heavyPelt: 2, ivory: 2 }) }] },
+    { id: "basin", name: "Steamwood Basin", x: 930, y: 520, label: "BASIN", kind: "Geothermal forest", desc: "A route charted in the marsh reaches hot springs and medicinal moss. A crafted vent mask is required; it reduces toxic exposure.", needsDiscovery: "steamRoute", needsGear: "ventmask1", hazard: "Toxic vent", gather: [{ id: "vents", label: "Gather sulfur and moss", loot: () => ({ sulfur: 3, moss: 3 }) }] },
+    { id: "observatory", name: "Shattered Observatory", x: 1180, y: 280, label: "RUINS", kind: "Rift research", desc: "Beyond the steppe and basin, a broken instrument watches the rift. Carry a rift compass. Storms still sweep the ruins.", needsDiscovery: "starRoute", needsGear: "riftcompass1", hazard: "Rift storm", gather: [{ id: "glass", label: "Recover rift glass and salvage", loot: () => ({ riftGlass: 3, scrap: 3, wire: 2 }) }] },
+  ];
+  for (const p of FAR_PLACES) places.push({ ...p, region: "far", art: "far-" + p.id });
+  const regionOf = (id) => place(id)?.region || "valley";
+  const farUnlocked = (s) => !!(s.flags.winterSurvived || s.quest >= 7 || s.flags.partOne);
+  function farObjective(s) {
+    if (!farUnlocked(s)) return { title: "Beyond the winter", place: null, text: "Survive The Long Winter to reveal the thawed pass." };
+    if (!s.flags.migrationRoute) return { title: "The thawed pass", place: "ashen", text: "Search the Ashen Foothills. Ancient migration markers reveal the way onto the steppe." };
+    if (!s.flags.steamRoute) return { title: "Through amber water", place: "marsh", text: "Search Amber Marsh for a safe route into Steamwood Basin. Craft a vent mask at camp." };
+    if (!s.flags.starRoute) return { title: "A fallen sky", place: "steppe", text: "Search Mammoth Steppe for the star chart. Craft a rift compass using materials from the basin." };
+    if (!s.flags.observatoryNotes) return { title: "The broken instrument", place: "observatory", text: "Carry a rift compass to the observatory and examine its archive." };
+    if (!s.flags.farBeacon) return { title: "A second signal", place: "observatory", text: "Restore the observatory beacon with 6 rift glass, 4 wire and 4 crystals." };
+    return { title: "The Far Shore endures", place: null, text: "The restored beacon charts a stable crossing. Both maps and your settlement remain open to explore." };
+  }
+  const carries = (s, id) => !!s.gearBag[id] || Object.values(gearOf(s, "hero")).includes(id);
+  const protectedFrom = (s, hazard) => hazard === "Deep mud" ? Object.values(gearOf(s, "hero")).includes("marshboots1") : hazard === "Toxic vent" ? carries(s, "ventmask1") : false;
+  function farHazard(s, p) {
+    if (!p || s.cheats.safeTravel || s.cheats.god || random(s) >= .25) return;
+    if (protectedFrom(s, p.hazard)) { spend(s, 2); note(s, p.hazard + ": your expedition gear limits exposure. −2 energy."); }
+    else { spend(s, 6); s.warmth -= 6; s.health -= 5; note(s, p.hazard + ": you retreat to safer ground. −6 energy, −6 warmth, −5 health."); clamp(s); }
+  }
+  function restoreBeacon(s) {
+    if (guard(s)) return guard(s);
+    if (s.loc !== "observatory" || !s.flags.observatoryNotes) return "Examine the observatory archive first.";
+    if (s.flags.farBeacon) return "The beacon is already restored.";
+    if (s.energy < 8) return "Too tired. Return to camp and rest.";
+    if (!can(s, {riftGlass: 6, wire: 4, energy: 4})) return "Need 6 rift glass, 4 wire and 4 crystals.";
+    pay(s, {riftGlass: 6, wire: 4, energy: 4}); spend(s, 8); s.flags.farBeacon = true; tick(s, .5);
+    note(s, "The Far Shore: a beam crosses the ancient sky. The observatory charts a stable route back to your valley.");
+    return "The beacon is restored. The Far Shore chapter is complete.";
+  }
 
   /* ---- story moments with Maya, tied to quest milestones ---- */
   const beatTitles = { blanket: "The Shared Blanket", echo: "The Reminiscent Echo", confession: "The Riverbank Confession" };
@@ -186,7 +225,7 @@
   function fresh(name) {
     return {
       version: 2, name: String(name || "Leo").trim().slice(0, 24) || "Leo",
-      started: true, prologue: 0, day: 1, hour: 8,
+      started: true, prologue: 0, day: 1, hour: 8, minute: 0,
       health: 100, food: 100, water: 100, warmth: 85, energy: 100, gathered: {}, shelters: [], gearBag: {}, gear: { hero: {}, maya: {} }, drop: null, survivors: [], stranger: null, spawned: { f: 0, m: 0, c: 0, t: 0 }, deaths: 0,
       loc: "camp", quest: 0, withMaya: false, flags: {},
       inv: { rope: 2, wire: 4, food: 6, water: 5 },
@@ -198,6 +237,7 @@
   }
   function validate(s) {
     if (s && s.version === 2) {
+      if (s.minute === undefined) s.minute = 0;
       if (s.energy === undefined) s.energy = 100;
       if (!s.gathered) s.gathered = {};
       if (!s.shelters) s.shelters = s.flags && s.flags.shelter ? [{ level: 0 }] : [];
@@ -210,6 +250,7 @@
       if (!s.gear.hero) s.gear.hero = {};
       if (!s.gear.maya) s.gear.maya = {};
       if (s.flags && s.flags.coat && !s.gear.hero.coat && !s.gear.maya.coat) { s.gear.hero.coat = "coat2"; s.gear.maya.coat = "coat2"; }
+      if (s.flags && (s.quest >= 7 || s.flags.partOne)) s.flags.winterSurvived = true;
       if (s.drop === undefined) s.drop = null;
       for (const q of s.survivors) { if (!q.gear) q.gear = {}; if (q.ill === undefined) q.ill = q.sick ? 20 : 0; }
     }
@@ -217,12 +258,13 @@
     if (!place(s.loc) || !Number.isInteger(s.quest) || s.quest < 0 || s.quest > 9) return false;
     for (const k of ["health", "food", "water", "warmth", "energy"]) if (!Number.isFinite(s[k]) || s[k] < 0 || s[k] > 100) return false;
     for (const k of ["day", "hour", "waves", "prologue", "seed"]) if (!Number.isFinite(s[k]) || s[k] < 0) return false;
+    if (!Number.isInteger(s.hour) || !Number.isInteger(s.minute) || s.minute < 0 || s.minute > 59) return false;
     if (s.hour >= 24 || s.day < 1 || s.waves > 3 || s.prologue > 4) return false;
     if (typeof s.withMaya !== "boolean" || !s.flags || !s.inv || !s.visited || !s.found || !s.beats || !s.beatDays || !s.cheats) return false;
     if (!Array.isArray(s.log) || s.log.length > 100) return false;
     if (!Array.isArray(s.shelters) || s.shelters.length > MAX_LEANTOS || s.shelters.some((x) => !x || !Number.isInteger(x.level) || x.level < 0 || x.level > 3)) return false;
     if (!Array.isArray(s.survivors) || s.survivors.length > MAX_SURVIVORS || s.survivors.some((p) => !p || typeof p.name !== "string" || p.name.length > 40 || !Number.isFinite(p.health) || !Object.hasOwn(TASKS, p.task))) return false;
-    if (Object.values(s.flags).some((v) => typeof v !== "boolean")) return false;
+    if (Object.entries(s.flags).some(([k, v]) => k === "dry" ? !Number.isInteger(v) || v < 0 || v > 8 : typeof v !== "boolean")) return false;
     if (Object.entries(s.inv).some(([k, v]) => !Object.hasOwn(names, k) || !Number.isFinite(v) || v < 0 || v > 9999)) return false;
     if (s.encounter && (!Number.isFinite(s.encounter.hp) || !Number.isFinite(s.encounter.max) || !Number.isFinite(s.encounter.damage) || typeof s.encounter.name !== "string")) return false;
     return true;
@@ -256,7 +298,7 @@
     s.withMaya = false;
     s.health = 35; s.food = Math.max(s.food, 40); s.water = Math.max(s.water, 40); s.warmth = Math.max(s.warmth, 50); s.energy = Math.max(s.energy, 60);
     if (s.hour >= 7) s.day++;
-    s.hour = 7;
+    s.hour = 7; s.minute = 0;
     note(s, "You black out. Maya finds you and drags you back to camp. You wake at dawn, weak but alive.");
   }
 
@@ -288,6 +330,11 @@
   /* ---- gear ---- */
   const SLOTS = { shirt: "Shirt", pants: "Pants", shoes: "Shoes", gloves: "Gloves", coat: "Coat", tool: "Tool", weapon: "Weapon" };
   const FAM = {
+    marshboots: { slot: "shoes", glyph: "", names: ["Resin-wrapped marsh boots"], warm: [1], cost: [{ leather: 3, resin: 4, reed: 4 }] },
+    ventmask: { slot: "tool", glyph: "", names: ["Reed-charcoal vent mask"], cost: [{ reed: 5, resin: 3, leaf: 4 }] },
+    riftcompass: { slot: "tool", glyph: "", names: ["Rift compass"], cost: [{ ivory: 2, sulfur: 2, wire: 3, energy: 3 }] },
+    obsidianspear: { slot: "weapon", glyph: "", names: ["Obsidian hunting spear"], dmg: [16], cost: [{ obsidian: 6, basalt: 2, rope: 2, log: 1 }] },
+    expeditioncoat: { slot: "coat", glyph: "", names: ["Mammoth-hide expedition coat"], warm: [6], cost: [{ heavyPelt: 4, leather: 3, resin: 2 }] },
     shirt: { slot: "shirt", glyph: "👕", names: ["Hide shirt", "Leather shirt", "Fur-lined shirt"], warm: [1, 2, 3], cost: [{ leather: 2, rope: 1 }, { leather: 3, rope: 1 }, { leather: 4, pelt: 1 }] },
     pants: { slot: "pants", glyph: "👖", names: ["Hide pants", "Leather pants", "Fur-lined pants"], warm: [1, 2, 3], cost: [{ leather: 2, rope: 1 }, { leather: 3, rope: 1 }, { leather: 4, pelt: 1 }] },
     shoes: { slot: "shoes", glyph: "🥾", names: ["Hide shoes", "Leather boots", "Fur-lined boots"], warm: [1, 2, 3], cost: [{ leather: 1, rope: 1 }, { leather: 2, rope: 1 }, { leather: 3, pelt: 1 }] },
@@ -312,12 +359,13 @@
   const armorOf = (g) => Math.min(3, Math.floor(warmOf(g) / 5));
   const weaponDmg = (g) => { let n = 0; eachItem(g, (i) => i.slot === "weapon" && (n += i.dmg)); return n; };
   const toolBonus = (g, kind) => { let n = 0; eachItem(g, (i) => i.slot === "tool" && (kind === "any" || i.kind === kind) && (n += i.bonus)); return n; };
-  const heavyCoat = (g) => !!(g.coat && GEAR[g.coat] && GEAR[g.coat].tier >= 2);
+  const heavyCoat = (g) => !!(g.coat && GEAR[g.coat] && GEAR[g.coat].warm >= 4);
   const canHunt = (g) => weaponDmg(g) > 0 || toolBonus(g, "wood") > 0;
-  const itemDesc = (i) => [i.warm ? "+" + i.warm + " warmth" : "", i.bonus ? "+" + i.bonus + " " + ({ wood: "logs", fish: "fish", forage: "berries" }[i.kind]) + " per task" : "", i.dmg ? "+" + i.dmg + " damage" : ""].filter(Boolean).join(", ");
+  const itemDesc = (i) => [i.fam === "marshboots" ? "Reduces marsh hazards when worn; less warmth than fur boots" : i.fam === "ventmask" ? "Carry to enter Steamwood; reduces vent exposure; occupies tool slot if equipped" : i.fam === "riftcompass" ? "Carry to navigate the observatory; occupies tool slot if equipped" : "",i.warm ? "+" + i.warm + " warmth" : "", i.bonus ? "+" + i.bonus + " " + ({ wood: "logs", fish: "fish", forage: "berries" }[i.kind]) + " per task" : "", i.dmg ? "+" + i.dmg + " damage" : ""].filter(Boolean).join(", ");
   const gearLock = (s, itemId) => {
     const i = GEAR[itemId];
     if (!i) return "Unknown item.";
+    if (["marshboots", "ventmask", "riftcompass", "obsidianspear", "expeditioncoat"].includes(i.fam) && !farUnlocked(s)) return "Survive The Long Winter first.";
     if (i.requires && !s.flags[i.requires]) return "Needs " + requireNames[i.requires] + " first.";
     return "";
   };
@@ -331,7 +379,7 @@
     if (s.energy < ENERGY.craft) return "Too tired. Sleep or rest first.";
     if (!s.cheats.freeCraft && !can(s, i.cost)) return "Not enough materials.";
     if (!s.cheats.freeCraft) pay(s, i.cost);
-    spend(s, ENERGY.craft); bagAdd(s, id); tick(s, 1);
+    spend(s, ENERGY.craft); bagAdd(s, id); tick(s, .5);
     note(s, "Crafted: " + i.name + ".");
     return "Crafted " + i.name + ".";
   }
@@ -350,7 +398,7 @@
     if (!s.cheats.freeCraft) pay(s, nxt.cost);
     spend(s, ENERGY.craft);
     if (where === "bag") { bagAdd(s, cur.id, -1); bagAdd(s, nxt.id); } else gearOf(s, where)[key] = nxt.id;
-    tick(s, 1);
+    tick(s, .5);
     note(s, cur.name + " upgraded to " + nxt.name + ".");
     coatCheck(s);
     return "Upgraded to " + nxt.name + ".";
@@ -515,7 +563,7 @@
     const season = seasonOf(s.day);
     if (season !== before) {
       note(s, SEASON_NOTES[season]);
-      if (before === "Winter" && s.quest >= 6) s.flags.winterSurvived = true;
+      if (before === "Winter" && s.quest >= 6) { s.flags.winterSurvived = true; note(s, "Spring thaw reveals a mountain pass. The Far Shore is now on your map."); }
     } else if ((s.day - 1) % (SEASON_LEN * 4) === SEASON_LEN - 3) note(s, "Cold winds from the north. Winter begins in 3 days. Stock logs, food and warm shelter.");
     survivorsDay(s);
     const tender = hasTender(s), burn = (season === "Winter" ? 3 : 2) - (tender ? 1 : 0);
@@ -538,40 +586,60 @@
     }
     progress(s);
   }
+  const isNight = (s) => s.hour >= 19 || s.hour < 6;
+  const clockMinutes = (s) => s.hour * 60 + (s.minute || 0);
+  const dawnHours = (s) => ((360 - clockMinutes(s) + 1440) % 1440 || 1440) / 60;
+  const actionEnergy = (s, kind) => Math.ceil(ENERGY[kind] * (isNight(s) && ["travel", "gather"].includes(kind) ? 1.5 : 1));
+  // Public tick API remains hours. Advance whole minutes so actions and old saves agree.
   function tick(s, h) {
-    for (let i = 0; i < h; i++) {
-      if (s.cheats.needs) { s.food = 100; s.water = 100; s.warmth = 100; s.energy = 100; }
-      const startLoc = s.loc;
-      s.hour++;
-      if (s.hour === CURFEW - 2 && s.loc !== "camp" && !s.cheats.noCurfew) note(s, "Dusk is near. Be back at camp by 10 PM.");
-      if (s.hour >= CURFEW && s.loc !== "camp" && !s.encounter && !s.homebound && !s.cheats.noCurfew) {
-        s.loc = "camp"; s.visited.camp = true; s.stranger = null; s.warmth -= 10;
-        note(s, "Night falls. You stumble back to camp in the dark, cold and shaken.");
-        s.notice = "Night fell while you were still out. You stumble back to camp in the dark, cold and shaken.";
-      }
-      const season = seasonOf(s.day);
-      s.food -= 2; s.water -= season === "Summer" ? 4 : 3;
-      const night = s.hour >= 19 || s.hour < 6;
-      const homeNight = startLoc === "camp" && s.flags.shelter ? (mainLevel(s) >= 1 ? -1 : -2) : -4;
-      s.warmth += (heavyCoat(gearOf(s, "hero")) ? 1 : night ? homeNight : -1) - (season === "Winter" ? 2 : 0);
-      if (startLoc === "camp" && s.flags.fire) s.warmth += 6;
-      s.warmth += Math.min(2, Math.floor(warmOf(gearOf(s, "hero")) / 6));
-      if (s.food <= 0) s.health -= 4;
-      if (s.water <= 0) s.health -= 6;
-      if (s.warmth < 25) s.health -= 3;
-      else if (s.food >= 40 && s.water >= 40 && s.warmth >= 40 && s.health < 100) s.health += 1;
+    if (!Number.isFinite(h) || h < 0) return;
+    if (s.minute === undefined) s.minute = 0;
+    for (let i = 0, n = Math.round(h * 60); i < n; i++) {
+      if (s.cheats.needs) s.food = s.water = s.warmth = s.energy = 100;
+      const startLoc = s.loc, night = isNight(s), season = seasonOf(s.day);
+      s.minute++;
+      if (s.minute >= 60) { s.minute = 0; s.hour++; }
       if (s.hour >= 24) { s.hour = 0; midnight(s); }
+      if (s.hour === 19 && s.minute === 0 && !s.sleeping) {
+        note(s, "Sunset. Night travel and gathering cost 50% more energy. Rest when you choose, or return to camp and sleep until dawn.");
+      }
+      s.food -= 2 / 60; s.water -= (season === "Summer" ? 4 : 3) / 60;
+      const homeNight = startLoc === "camp" && s.flags.shelter ? (mainLevel(s) >= 1 ? -1 : -2) : -4;
+      let warmth = (heavyCoat(gearOf(s, "hero")) ? 1 : night ? homeNight : -1) - (season === "Winter" ? 2 : 0);
+      if (startLoc === "camp" && s.flags.fire) warmth += 6;
+      warmth += Math.min(2, Math.floor(warmOf(gearOf(s, "hero")) / 6));
+      s.warmth += warmth / 60;
+      if (night && !s.sleeping) s.energy -= 2 / 60;
+      if (s.food <= 0) s.health -= 4 / 60;
+      if (s.water <= 0) s.health -= 6 / 60;
+      if (s.warmth < 25) s.health -= 3 / 60;
+      else if (s.food >= 40 && s.water >= 40 && s.warmth >= 40 && s.health < 100) s.health += 1 / 60;
       const before = s.collapses;
       clamp(s);
       if (s.collapses !== before) break;
-      if (s.hour === 0 && !s.sleeping && !s.cheats.noCurfew) {
-        note(s, "Midnight. You cannot keep your eyes open and sleep until morning.");
-        s.sleeping = true; tick(s, 8); s.sleeping = false;
-        if (s.loc === "camp") recover(s, "You sleep through the night.");
-        s.notice = "Midnight. You cannot keep your eyes open. You sleep through the night and wake at " + (s.hour % 12 || 12) + ":00 " + (s.hour < 12 ? "AM" : "PM") + " on day " + s.day + ".";
-        break;
-      }
     }
+  }
+  function nap(s, hours) {
+    if (guard(s)) return guard(s);
+    if (s.loc !== "camp") return "Return to camp to rest.";
+    if (![.5, 1, "dawn"].includes(hours)) return "Choose a rest duration.";
+    const duration = hours === "dawn" ? dawnHours(s) : hours;
+    const before = s.collapses;
+    s.sleeping = true; tick(s, duration); s.sleeping = false;
+    if (s.collapses !== before) return "You wake after collapsing.";
+    s.energy += ENERGY.nap * duration; clamp(s);
+    note(s, hours === "dawn" ? "You rest by the fire until 6:00 AM." : "You rest by the fire for " + (hours === .5 ? "30 minutes." : "1 hour."));
+    return "Rest complete.";
+  }
+  function returnAndSleep(s) {
+    if (guard(s)) return guard(s);
+    if (s.loc !== "camp") {
+      const before = s.collapses;
+      travel(s, "camp");
+      if (s.collapses !== before) return "Maya brought you home after you collapsed.";
+      if (s.loc !== "camp" || s.encounter || s.stranger) return "Resolve the journey first.";
+    }
+    return rest(s);
   }
 
   /* ---- quests and guidance ---- */
@@ -644,7 +712,7 @@
       if (!s.flags.riftgate) { const g = gatherFor("riftgate", "Open Build at camp and make the rift gate."); return { title: quests[8].title, ...g }; }
       return { title: quests[8].title, place: "camp", text: "At camp, open the rift gate." };
     }
-    return { title: "Part 1 complete", place: null, text: "Your settlement endures. Keep growing it. Part 2 will carry your camp across the rift." + maya };
+    return farObjective(s);
   }
 
   /* ---- actions available here ---- */
@@ -664,17 +732,20 @@
   function actionsFor(s) {
     const p = place(s.loc), out = [];
     const busy = s.encounter ? "Resolve the encounter first." : s.stranger ? "Deal with the stranger first." : "";
-    const late = s.loc === "camp" && s.hour >= CURFEW && !s.cheats.noCurfew;
-    const LATE_OK = ["rest", "nap", "talk", "build", "gear", "survivors", "warn", "maya"];
-    const dark = "It is too dark. Tonight you can only check on survivors, craft, talk or rest. You sleep at midnight.";
-    const push = (type, id, label, sub, disabled = "", extra = {}) => out.push({ type, id, label, sub, disabled: disabled || busy || (late && !LATE_OK.includes(type) ? dark : ""), ...extra });
+    const push = (type, id, label, sub, disabled = "", extra = {}) => out.push({ type, id, label, sub, disabled: disabled || busy, ...extra });
+    if (s.stranger) push("nearby", "nearby", "Investigate nearby person", "Someone is nearby · speak, offer help, invite or leave", "", { glow: true, disabled: "" });
+    if (s.encounter) push("resume-fight", "resume-fight", "Return to the encounter", "Resolve the threat or retreat", "", { glow: true, disabled: "" });
+    if (p.region === "far") {
+      push("warn", "hazard", p.hazard, "Gathering has a 25% hazard chance; retreat to River Camp at any time", "", { info: true });
+      if (s.loc === "observatory" && s.flags.observatoryNotes && !s.flags.farBeacon) push("beacon", "beacon", "Restore the observatory beacon", "30 minutes · 8 energy · 6 rift glass, 4 wire, 4 crystals", "", { quest: true });
+    }
     if (s.loc === "camp") {
       const ready = beatReady(s, "talk"), wait = beatWaiting(s);
-      push("rest", "rest", "Sleep in the lean-to", "8 hours · full energy · +30 health", s.flags.shelter ? "" : "Build the lean-to first.");
-      push("nap", "nap", "Rest by the fire", "1 hour · +" + ENERGY.nap + " energy");
+      push("rest", "rest", "Sleep until dawn", "Until 6:00 AM · full energy with shelter · rough rest without shelter");
+      push("nap", "nap", "Rest by the fire", "Choose 30 minutes, 1 hour, or until dawn");
       push("talk", "talk", "Talk with Maya", ready ? "● A quiet moment is ready" : wait || "She has something to say", "", { glow: !!ready });
       push("build", "build", "Build and craft", "Open the workbench · " + ENERGY.craft + " energy each");
-      push("refill", "refill", "Fill water bottles", "1 hour · " + ENERGY.refill + " energy · +3 bottles", tiredWhy(s, ENERGY.refill));
+      push("refill", "refill", "Fill water bottles", "10 minutes · " + ENERGY.refill + " energy · +3 bottles", tiredWhy(s, ENERGY.refill));
       push("maya", "maya", s.withMaya ? "Leave Maya at camp" : "Take Maya along", s.withMaya ? "She will fish or forage while you are away" : "Herb bonus, ambush warning, combat help");
       if (s.flags.shelter) push("gear", "gear", "Gear and equipment", "Clothing, tools and weapons for you, Maya and your survivors");
       if (s.survivors.length) {
@@ -691,17 +762,17 @@
         let why = "";
         const left = gatherLeft(s, a.id);
         if (left <= 0) why = "Picked clean for today. It refreshes at midnight.";
-        else if (tiredWhy(s, ENERGY.gather)) why = tiredWhy(s, ENERGY.gather);
+        else if (tiredWhy(s, actionEnergy(s, "gather"))) why = tiredWhy(s, actionEnergy(s, "gather"));
         if (a.needsFlag && !s.flags[a.needsFlag]) why = a.why;
         if (a.needsMaya && !s.withMaya) why = a.needsMaya;
-        push("gather", a.id, a.label, "1 hour · " + ENERGY.gather + " energy · " + Math.max(0, left) + " of " + DAILY_LIMIT + " left today · " + list(lootFor(s, a)), why);
+        push("gather", a.id, a.label, "20 minutes · " + actionEnergy(s, "gather") + " energy · " + Math.max(0, left) + " of " + DAILY_LIMIT + " left today · " + list(lootFor(s, a)), why);
       }
       if (["forest", "grove", "river"].includes(s.loc) && s.quest >= 1) {
         const g = gearOf(s, "hero"), left = gatherLeft(s, "hunt");
-        push("hunt", "hunt", "Hunt game", canHunt(g) ? "1 hour · " + ENERGY.gather + " energy · " + Math.max(0, left) + " of " + DAILY_LIMIT + " left today · meat, hides, claws" : "Equip a spear or an axe first (Gear and equipment at camp)", !canHunt(g) ? "Equip a spear or an axe first." : left <= 0 ? "No more game today. It refreshes at midnight." : tiredWhy(s, ENERGY.gather));
+        push("hunt", "hunt", "Hunt game", canHunt(g) ? "20 minutes · " + actionEnergy(s, "gather") + " energy · " + Math.max(0, left) + " of " + DAILY_LIMIT + " left today · meat, hides, claws" : "Equip a spear or an axe first (Gear and equipment at camp)", !canHunt(g) ? "Equip a spear or an axe first." : left <= 0 ? "No more game today. It refreshes at midnight." : tiredWhy(s, actionEnergy(s, "gather")));
       }
       if (s.loc === "river") {
-        push("refill", "refill", "Fill water bottles", "1 hour · " + ENERGY.refill + " energy · +3 bottles", tiredWhy(s, ENERGY.refill));
+        push("refill", "refill", "Fill water bottles", "10 minutes · " + ENERGY.refill + " energy · +3 bottles", tiredWhy(s, ENERGY.refill));
         if (s.quest === 3) {
           const armed = s.flags.spear || (s.inv.trap || 0) >= 3;
           push("wolf", "wolf", "Track the wolf", armed ? "Quest · turn-based fight · " + ENERGY.wolf + " energy" : "Needs an iron spear or 3 traps", armed ? tiredWhy(s, ENERGY.wolf) : "Prepare an iron spear or 3 wooden traps.", { quest: true });
@@ -740,10 +811,11 @@
     const a = actionsFor(s).find((x) => x.type === type && x.id === id);
     if (!a) return "That is not possible here.";
     if (a.disabled) return a.disabled;
+    if (type === "beacon") return restoreBeacon(s);
     if (type === "gather") return gather(s, id);
     if (type === "hunt") return huntHero(s);
     if (type === "rest") return rest(s);
-    if (type === "nap") { tick(s, 1); s.energy += ENERGY.nap; clamp(s); note(s, "You rest by the fire for an hour."); return "You feel a little fresher."; }
+    if (type === "nap") return nap(s, 1);
     if (type === "refill") return refill(s);
     if (type === "maya") { s.withMaya = !s.withMaya; note(s, s.withMaya ? "Maya joins you." : "Maya stays at camp."); return s.withMaya ? "Maya joins you." : "Maya stays at camp."; }
     if (type === "wolf") { spend(s, ENERGY.wolf); return wolf(s); }
@@ -752,11 +824,13 @@
     return "Nothing happens.";
   }
   // Animals can interrupt work in the wild. Maya often spots them first.
+  const farThreat = (id) => ({ashen: ["Ashen saber-cat", 60, 12], marsh: ["Marsh stalker", 48, 11], steppe: ["Steppe dire wolf", 65, 13], basin: ["Steamwood terror bird", 58, 12], observatory: ["Rift-displaced sentinel cat", 75, 14]}[id]);
+  function regionEncounter(id) { const [name, hp, damage] = farThreat(id); return {name, hp, max: hp, damage}; }
   function wildEncounter(s) {
     if (s.cheats.safeTravel || s.quest < 1 || s.loc === "camp") return;
     if (random(s) >= WILD_CHANCE) return;
     if (s.withMaya && random(s) < 0.5) { note(s, "Maya spots movement and waves you back. You avoid trouble."); return; }
-    s.encounter = { name: ["ridge", "den"].includes(s.loc) ? "Cave bear" : s.loc === "grove" ? "Rift-displaced terror bird" : "Dire wolf", hp: 45, max: 45, damage: 10 };
+    s.encounter = regionOf(s.loc) === "far" ? regionEncounter(s.loc) : { name: ["ridge", "den"].includes(s.loc) ? "Cave bear" : s.loc === "grove" ? "Rift-displaced terror bird" : "Dire wolf", hp: 45, max: 45, damage: 10 };
     note(s, "An animal interrupts your work.");
   }
   function huntHero(s) {
@@ -766,7 +840,7 @@
     for (const [k, n] of Object.entries(out)) add(s, k, n);
     const key = gatherKey(s, "hunt"), gg = s.gathered[key];
     s.gathered[key] = { day: s.day, n: (gg && gg.day === s.day ? gg.n : 0) + 1 };
-    spend(s, ENERGY.gather); tick(s, 1);
+    spend(s, actionEnergy(s, "gather")); tick(s, 1 / 3);
     note(s, "You bring down game. Collected " + list_(out) + ".");
     progress(s);
     if (s.loc !== "camp") wildEncounter(s);
@@ -774,22 +848,24 @@
   }
   function gather(s, id) {
     const a = (place(s.loc).gather || []).find((x) => x.id === id);
+    const site = place(s.loc);
     const loot = lootFor(s, a);
     if (s.loc === "rift") { s.flags.batteryFound = true; note(s, "Violet light fractures. Another century falls through the trees."); }
     if (loot.alternator) { s.flags.salvaged = true; note(s, "The crowbar peels back a familiar badge. A Mustang alternator, intact."); }
     for (const [k, n] of Object.entries(loot)) add(s, k, n);
     const key = gatherKey(s, id), g = s.gathered[key];
     s.gathered[key] = { day: s.day, n: (g && g.day === s.day ? g.n : 0) + 1 };
-    spend(s, ENERGY.gather);
-    tick(s, 1);
+    spend(s, actionEnergy(s, "gather"));
+    tick(s, 1 / 3);
     note(s, "Gathered " + list(loot) + ".");
     progress(s);
+    if (s.loc === site.id && site.region === "far") farHazard(s, site);
     if (s.loc !== "camp") wildEncounter(s);
     return s.encounter ? "Gathered " + list(loot) + ". An animal interrupts you!" : "Gathered " + list(loot) + ".";
   }
   function refill(s) {
     spend(s, ENERGY.refill);
-    add(s, "water", 3); tick(s, 1);
+    add(s, "water", 3); tick(s, 1 / 6);
     return "Filled 3 bottles.";
   }
   function recover(s, text) {
@@ -803,9 +879,13 @@
     s.pending = beatReady(s, "rest");
   }
   function rest(s) {
-    s.sleeping = true; tick(s, 8); s.sleeping = false;
-    if (s.loc === "camp") recover(s, "Eight hours of sleep.");
-    return "You wake rested.";
+    if (guard(s)) return guard(s);
+    if (s.loc !== "camp") return "Return to camp to sleep.";
+    const before = s.collapses;
+    s.sleeping = true; tick(s, dawnHours(s)); s.sleeping = false;
+    if (s.collapses !== before) return "You wake after collapsing.";
+    recover(s, "Sleep until dawn.");
+    return "You wake at 6:00 AM.";
   }
   // Talk: a ready story moment, or a line from Maya.
   function talk(s) {
@@ -852,7 +932,7 @@
     if (r.heal) s.health += r.heal;
     if (id === "shelter") s.shelters = [{ level: 0 }];
     if (id === "fire") { s.warmth += 20; s.flags.fireBuilt = true; }
-    tick(s, 1);
+    tick(s, .5);
     note(s, "Built: " + r.title + ".");
     progress(s);
     clamp(s);
@@ -871,7 +951,7 @@
     if (!s.cheats.freeCraft) pay(s, EXTRA_LEANTO);
     spend(s, ENERGY.craft);
     s.shelters.push({ level: 0 });
-    tick(s, 1);
+    tick(s, .5);
     note(s, "Built another lean-to. It has room for 1 survivor.");
     progress(s);
     return "Built another lean-to.";
@@ -888,7 +968,7 @@
     if (!s.cheats.freeCraft) pay(s, up.cost);
     spend(s, ENERGY.craft);
     sh.level++;
-    tick(s, 1);
+    tick(s, .5);
     note(s, (i === 0 ? "Main lean-to" : "Lean-to " + (i + 1)) + " upgraded to level " + sh.level + ".");
     progress(s);
     return "Upgraded to level " + sh.level + ".";
@@ -956,8 +1036,8 @@
     const p = s.stranger;
     if (!p || p.hostile) return "They will not come.";
     if (s.survivors.length >= MAX_SURVIVORS) return "The camp cannot support anyone else.";
-    if (s.energy < ENERGY.travel) return "Too tired to guide them. Rest first.";
-    spend(s, ENERGY.travel);
+    if (s.energy < actionEnergy(s, "travel")) return "Too tired to guide them. Rest first.";
+    spend(s, actionEnergy(s, "travel"));
     s.survivors.push({ id: "p" + s.spawned.t + "-" + s.day, name: p.name, sex: p.sex, child: p.child, health: p.injured ? 45 : 90, injured: p.injured, sick: false, ill: 0, gear: {}, task: "idle", joined: s.day });
     s.stranger = null;
     s.loc = "camp"; s.visited.camp = true;
@@ -1007,7 +1087,7 @@
     pay(s, { herb: cost }); spend(s, 5);
     if (needHp) { p.injured = false; p.health = Math.min(100, p.health + 25); }
     if (needSick) { p.sick = false; p.ill = 0; }
-    tick(s, 1);
+    tick(s, .5);
     note(s, "You treated " + p.name + ".");
     return p.name + " is looking better.";
   }
@@ -1023,13 +1103,17 @@
   function travelLock(s, id) {
     const p = place(id);
     if (!p) return "Unknown destination.";
-    if (!s.cheats.noCurfew && id !== "camp" && s.hour + travelHours(s, id) >= CURFEW) return s.loc === "camp" ? "It is too late to head out. Night is falling. Rest by the fire until morning." : "Dusk is near. Head back to camp.";
     if (s.cheats.openMap) return "";
+    if (p.region === "far") {
+      if (!farUnlocked(s)) return "Survive The Long Winter to reveal the mountain pass.";
+      if (p.needsDiscovery && !s.flags[p.needsDiscovery]) return "Discover the route first. Check The Far Shore guide.";
+      if (p.needsGear && !carries(s, p.needsGear)) return "Carry " + GEAR[p.needsGear].name + " in your gear pack or on your character.";
+    }
     if (p.requires && !s.flags[p.requires]) return p.requires === "coat" ? "Equip heavy coats on you and Maya before climbing Glacier Peaks." : "Find the monolith in Foggy Ravine first.";
     if (p.gate && s.quest < p.gate) return "Complete “" + quests[p.gate - 1].title + "” to reach " + p.name + ".";
     return "";
   }
-  const travelHours = (s, id) => (s.cheats.fastTravel || (s.flags.signal && s.visited[id]) ? 1 : 2);
+  const travelHours = (s, id) => (s.cheats.fastTravel || (s.flags.riftgate && (regionOf(s.loc) === "far" || regionOf(id) === "far")) || (s.flags.signal && s.visited[id]) ? 1 : regionOf(s.loc) !== regionOf(id) ? 3 : 2);
   function travel(s, id) {
     if (s.drop) collect(s);
     if (s.encounter) return "Resolve the encounter first.";
@@ -1037,19 +1121,20 @@
     if (s.loc === id) return "You are already here.";
     const lock = travelLock(s, id);
     if (lock) return lock;
-    if (id === "camp") spend(s, ENERGY.travel);
-    else if (s.energy < ENERGY.travel) return "Too tired to travel. Return to camp and rest.";
-    else spend(s, ENERGY.travel);
+    if (id === "camp") spend(s, actionEnergy(s, "travel"));
+    else if (s.energy < actionEnergy(s, "travel")) return "Too tired to travel. Return to camp and rest.";
+    else spend(s, actionEnergy(s, "travel"));
     const hours = travelHours(s, id);
     s.loc = id; s.visited[id] = true;
     s.homebound = id === "camp"; tick(s, hours); s.homebound = false;
     if (s.loc !== id) return "You black out on the trail.";
     note(s, "Reached " + place(id).name + ".");
+    if (regionOf(id) === "far") s.flags.farVisited = true;
     // No surprise fights until the camp is established (after Fresh Catch).
     if (id !== "camp" && s.quest >= 2 && !s.cheats.safeTravel && random(s) < 0.12) {
       if (s.withMaya) note(s, "Maya spots movement in the trees. You avoid an ambush.");
       else {
-        s.encounter = { name: ["ridge", "den"].includes(id) ? "Cave bear" : id === "grove" ? "Rift-displaced terror bird" : "Dire wolf", hp: 45, max: 45, damage: 10 };
+        s.encounter = regionOf(id) === "far" ? regionEncounter(id) : { name: ["ridge", "den"].includes(id) ? "Cave bear" : id === "grove" ? "Rift-displaced terror bird" : "Dire wolf", hp: 45, max: 45, damage: 10 };
         note(s, "An animal blocks the trail.");
       }
     }
@@ -1070,7 +1155,7 @@
     if (!e) return "No encounter.";
     if (action === "flee") {
       s.encounter = null; s.loc = "camp"; s.withMaya = false;
-      s.health -= 4; tick(s, 1); clamp(s);
+      s.health -= 4; tick(s, .5); clamp(s);
       return "You escape to camp, losing 4 health.";
     }
     if (action === "trap") { if (!can(s, { trap: 1 })) return "No traps left."; pay(s, { trap: 1 }); e.hp -= 20; }
@@ -1086,9 +1171,10 @@
     else if (e.wave) { s.waves++; note(s, "Transmitter defense wave " + s.waves + " survived."); }
     else if (e.human) { add(s, "food", 1); add(s, "scrap", 2); note(s, "The stranger drops the spear and flees into the trees. You recover a ration and some scrap."); }
     else { add(s, "food", 1); note(s, "The threat retreats. You recover a ration from your dropped pack."); }
+    if (farThreat(s.loc) && e.name === farThreat(s.loc)[0]) s.drop = {name: e.name, loot: {meat: 3, hide: 2, claw: 1}};
     if (DROPS[e.name]) s.drop = { name: e.name, loot: { ...DROPS[e.name] } };
     s.encounter = null;
-    tick(s, 1);
+    tick(s, .5);
     progress(s);
     clamp(s);
     return s.drop ? "Encounter survived. Something is left to collect." : "Encounter survived.";
@@ -1103,7 +1189,7 @@
     if (s.energy < ENERGY.ravine) return "Too tired. Return to camp and rest.";
     spend(s, ENERGY.ravine);
     pay(s, { food: 6 });
-    tick(s, 3);
+    tick(s, .5);
     s.flags.monolith = true; s.visited.monolith = true;
     note(s, "The dormant monolith wakes. The ravine is behind you.");
     progress(s);
@@ -1148,21 +1234,22 @@
       seasonLoot(s, loot);
       if (s.flags.committed && s.withMaya) for (const k of ["herb", "berry", "sapling"]) if (loot[k]) loot[k] += 2;
     }
-    const hours = o.uniqueFlag && s.flags[o.uniqueFlag] ? 0 : o.cost;
     spend(s, searchCost(s, o));
     s.found[key] = s.day;
     for (const [k, n] of Object.entries(loot)) add(s, k, n);
     if (o.uniqueFlag) s.flags[o.uniqueFlag] = true;
-    if (hours) tick(s, hours);
+    tick(s, 1 / 6);
     const empty = repeatable(o) && !Object.keys(loot).length;
     if (empty) note(s, "You search the " + o.name.toLowerCase() + " carefully but find nothing this time.");
     else note(s, "Discovery · " + o.name + ": " + o.text + (Object.keys(loot).length ? " Found " + list(loot) + "." : ""));
     progress(s);
     maybeStranger(s);
-    return s.stranger ? "Someone is nearby." : empty ? "Nothing found this time." : Object.keys(loot).length ? "Found " + list(loot) + "." : "Added to your journal.";
+    return s.stranger ? "Someone is nearby. Choose Investigate nearby person to approach." : empty ? "Nothing found this time." : Object.keys(loot).length ? "Found " + list(loot) + "." : "Added to your journal.";
   }
 
   root.Rift2 = {
+    isNight, clockMinutes, dawnHours, actionEnergy, nap, returnAndSleep,
+    FAR_PLACES, farUnlocked, farObjective, regionOf, restoreBeacon, farHazard, carries,
     KEY, MANUAL_KEY, names, recipes, quests, places, place, beatTitles, TRAIL, CIRCUIT,
     fresh, validate, read, write, random, add, note, can, pay, list, tick, clamp, progress,
     objective, missing, missingText, actionsFor, act, use, talk, rest, craft, recipeLock, travel, travelLock, travelHours,
