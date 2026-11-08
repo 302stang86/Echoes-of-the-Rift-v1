@@ -1,0 +1,7 @@
+dist/
+_site/
+.openai/
+.release-state.json
+node_modules/
+*.zip
+.DS_Store
