@@ -6,7 +6,7 @@
 
   const CURFEW = 22; // legacy export; no automatic curfew in release 4
   const DAILY_LIMIT = 3; // gathers per area per day
-  const ENERGY = { max: 100, gather: 8, search: 4, lore: 2, travel: 4, craft: 4, refill: 2, wolf: 6, bear: 6, ravine: 12, defend: 8, nap: 25 };
+  const ENERGY = { max: 100, gather: 8, search: 4, lore: 2, travel: 4, craft: 0, refill: 2, wolf: 6, bear: 6, ravine: 12, defend: 8, nap: 25 };
   const WILD_CHANCE = 0.15;
   const SEASON_LEN = 20; // days; four seasons make an 80-day year
   const seasonOf = (day) => ["Autumn", "Winter", "Spring", "Summer"][Math.floor(((day - 1) % (SEASON_LEN * 4)) / SEASON_LEN)];
@@ -35,7 +35,10 @@
     energy: "rift", battery: "rift", alternator: "ridge",
   };
 
+  const BEACON_COST = { riftGlass: 6, wire: 4, energy: 4 };
   const recipes = {
+    berryrations: { title: "Berry travel rations", desc: "Simmer 4 berries with 1 bottle of water into 2 preserved rations. Needs a burning fire.", cost: { berry: 4, water: 1 }, item: "food", count: 2, requires: "fire", art: "frontier-18" },
+    broth: { title: "Preserved meat broth", desc: "Cook 1 raw meat with 1 bottle of water into 2 rations for the trail. Needs a burning fire.", cost: { meat: 1, water: 1 }, item: "food", count: 2, requires: "fire", art: "frontier-06" },
     mossdressing: { title: "Moss recovery dressing", desc: "Restore 50 health with Steamwood moss.", cost: { moss: 2, herb: 1 }, heal: 50, requires: "winterSurvived", art: "far-basin" },
     shelter: { title: "Riverbank lean-to", desc: "A safe place to sleep. Lets you rest at camp.", cost: { log: 10, leaf: 15, rope: 1 }, flag: "shelter", art: "frontier-08" },
     fire: { title: "Campfire", desc: "Warms the camp. Burns 2 logs each midnight.", cost: { stone: 4, log: 3 }, flag: "fire", art: "frontier-20" },
@@ -145,9 +148,8 @@
     if (guard(s)) return guard(s);
     if (s.loc !== "observatory" || !s.flags.observatoryNotes) return "Examine the observatory archive first.";
     if (s.flags.farBeacon) return "The beacon is already restored.";
-    if (s.energy < 8) return "Too tired. Return to camp and rest.";
-    if (!can(s, {riftGlass: 6, wire: 4, energy: 4})) return "Need 6 rift glass, 4 wire and 4 crystals.";
-    pay(s, {riftGlass: 6, wire: 4, energy: 4}); spend(s, 8); s.flags.farBeacon = true; tick(s, .5);
+    if (!can(s, BEACON_COST)) return "Need 6 rift glass, 4 wire and 4 crystals.";
+    pay(s, BEACON_COST); s.flags.farBeacon = true; 
     note(s, "The Far Shore: a beam crosses the ancient sky. The observatory charts a stable route back to your valley.");
     return "The beacon is restored. The Far Shore chapter is complete.";
   }
@@ -226,7 +228,7 @@
     return {
       version: 2, name: String(name || "Leo").trim().slice(0, 24) || "Leo",
       started: true, prologue: 0, day: 1, hour: 8, minute: 0,
-      health: 100, food: 100, water: 100, warmth: 85, energy: 100, gathered: {}, shelters: [], gearBag: {}, gear: { hero: {}, maya: {} }, drop: null, survivors: [], stranger: null, spawned: { f: 0, m: 0, c: 0, t: 0 }, deaths: 0,
+      health: 100, food: 100, water: 100, warmth: 85, energy: 100, gathered: {}, shelters: [], fieldCamps: {}, gearBag: {}, gear: { hero: {}, maya: {} }, drop: null, survivors: [], stranger: null, spawned: { f: 0, m: 0, c: 0, t: 0 }, deaths: 0,
       loc: "camp", quest: 0, withMaya: false, flags: {},
       inv: { rope: 2, wire: 4, food: 6, water: 5 },
       visited: { camp: true }, found: {}, beats: {}, beatDays: {},
@@ -245,6 +247,7 @@
       if (s.stranger === undefined) s.stranger = null;
       if (!s.spawned) s.spawned = { f: 0, m: 0, c: 0, t: 0 };
       if (s.deaths === undefined) s.deaths = 0;
+      if (!s.fieldCamps) s.fieldCamps = {};
       if (!s.gearBag) s.gearBag = {};
       if (!s.gear) s.gear = { hero: {}, maya: {} };
       if (!s.gear.hero) s.gear.hero = {};
@@ -254,6 +257,7 @@
       if (s.drop === undefined) s.drop = null;
       for (const q of s.survivors) { if (!q.gear) q.gear = {}; if (q.ill === undefined) q.ill = q.sick ? 20 : 0; }
     }
+    if (s && (!s.fieldCamps || typeof s.fieldCamps !== "object" || Array.isArray(s.fieldCamps) || Object.entries(s.fieldCamps).some(([id, c]) => !place(id) || id === "camp" || !c || typeof c.shelter !== "boolean" || typeof c.fireBuilt !== "boolean" || !Number.isInteger(c.fuel) || c.fuel < 0 || c.fuel > 1440 || !Number.isInteger(c.restMinutes) || c.restMinutes < 0 || c.restMinutes > 59))) return false;
     if (!s || s.version !== 2 || typeof s.name !== "string" || s.name.length > 24) return false;
     if (!place(s.loc) || !Number.isInteger(s.quest) || s.quest < 0 || s.quest > 9) return false;
     for (const k of ["health", "food", "water", "warmth", "energy"]) if (!Number.isFinite(s[k]) || s[k] < 0 || s[k] > 100) return false;
@@ -349,6 +353,29 @@
   for (const [fam, f] of Object.entries(FAM)) f.names.forEach((name, i) => {
     GEAR[fam + (i + 1)] = { id: fam + (i + 1), fam, tier: i + 1, max: f.names.length, slot: f.slot, glyph: f.glyph, name, warm: (f.warm || [])[i] || 0, bonus: (f.bonus || [])[i] || 0, dmg: (f.dmg || [])[i] || 0, kind: f.kind || "", cost: f.cost[i], requires: (f.req || [])[i] || "" };
   });
+  // The guide derives crafting uses from real costs, so it stays in step with recipes.
+  const QUEST_USES = {
+    food: ["Quest: carry 6 rations with Maya through Foggy Ravine", "Survival: eat or feed camp survivors"],
+    trap: ["Quest: carry 3 traps to track the dire wolf", "Combat: consumes 1 trap to deal 20 damage"],
+    energy: ["Quest: restore the observatory beacon (4 crystals)", "Combat: consumes 1 crystal for a flare"],
+    wire: ["Quest: restore the observatory beacon (4 wire)"],
+    riftGlass: ["Quest: restore the observatory beacon (6 rift glass)"],
+    log: ["Camp: daily fire fuel"],
+    berry: ["Survival: eat or feed camp survivors"],
+    water: ["Survival: drink to restore water"],
+    herb: ["Camp: treat injured or sick survivors"],
+  };
+  function resourceUses(key) {
+    const uses = [];
+    for (const r of Object.values(recipes)) if (r.cost[key]) uses.push("Craft: " + r.title + " (" + r.cost[key] + ")");
+    for (const i of Object.values(GEAR)) if (i.cost[key]) uses.push("Gear: " + i.name + " (" + i.cost[key] + ")");
+    SHELTER_UPGRADES.forEach((u, i) => { if (u.cost[key]) uses.push("Build: lean-to level " + (i + 1) + " (" + u.cost[key] + ")"); });
+    if (FIELD_CAMP_COST[key]) uses.push("Build: field shelter (" + FIELD_CAMP_COST[key] + ")");
+    if (key === "log") uses.push("Field fire: 3 logs for 3 hours of fuel");
+    if (key === "stone") uses.push("Field fire: 4 stone to build the fire ring");
+    if (EXTRA_LEANTO[key]) uses.push("Build: extra lean-to (" + EXTRA_LEANTO[key] + ")");
+    return [...uses, ...(QUEST_USES[key] || [])];
+  }
   const gearOf = (s, who) => {
     if (who === "hero" || who === "maya") { if (!s.gear) s.gear = { hero: {}, maya: {} }; return s.gear[who] || (s.gear[who] = {}); }
     const p = (s.survivors || []).find((x) => x.id === who);
@@ -379,7 +406,7 @@
     if (s.energy < ENERGY.craft) return "Too tired. Sleep or rest first.";
     if (!s.cheats.freeCraft && !can(s, i.cost)) return "Not enough materials.";
     if (!s.cheats.freeCraft) pay(s, i.cost);
-    spend(s, ENERGY.craft); bagAdd(s, id); tick(s, .5);
+    spend(s, ENERGY.craft); bagAdd(s, id); 
     note(s, "Crafted: " + i.name + ".");
     return "Crafted " + i.name + ".";
   }
@@ -398,7 +425,7 @@
     if (!s.cheats.freeCraft) pay(s, nxt.cost);
     spend(s, ENERGY.craft);
     if (where === "bag") { bagAdd(s, cur.id, -1); bagAdd(s, nxt.id); } else gearOf(s, where)[key] = nxt.id;
-    tick(s, .5);
+    
     note(s, cur.name + " upgraded to " + nxt.name + ".");
     coatCheck(s);
     return "Upgraded to " + nxt.name + ".";
@@ -586,6 +613,35 @@
     }
     progress(s);
   }
+  const FIELD_CAMP_COST = {log: 4, leaf: 6, rope: 1};
+  // Use the original route distance, so a later fast-travel unlock never removes a campsite.
+  const expeditionHours = (id) => regionOf(id) === "far" ? 6 : 4;
+  const canCampAt = (id) => id !== "camp" && expeditionHours(id) >= 6;
+  const fieldCamp = (s) => s.fieldCamps?.[s.loc];
+  const campRisk = (s) => s.loc === "camp" ? 0 : fieldCamp(s)?.fuel > 0 ? .12 : .20;
+  function buildFieldCamp(s) {
+    if (guard(s)) return guard(s);
+    if (!canCampAt(s.loc)) return "Field camps are available on expeditions of six or more hours round trip.";
+    if (fieldCamp(s)?.shelter) return "A field shelter already stands here.";
+    if (!s.cheats.freeCraft && !can(s, FIELD_CAMP_COST)) return "Need 4 logs, 6 leaves and 1 rope.";
+    if (!s.cheats.freeCraft) pay(s, FIELD_CAMP_COST);
+    if (!s.fieldCamps) s.fieldCamps = {};
+    s.fieldCamps[s.loc] = {shelter: true, fireBuilt: false, fuel: 0, restMinutes: 0};
+    note(s, "Built a field shelter at " + place(s.loc).name + ". Resting here risks attack; a fire helps.");
+    return "Field camp ready. Set a fire before resting.";
+  }
+  function lightFieldFire(s) {
+    if (guard(s)) return guard(s);
+    const c = fieldCamp(s);
+    if (!c?.shelter) return "Build a field shelter here first.";
+    const cost = c.fireBuilt ? {log: 3} : {log: 3, stone: 4};
+    if (c.fuel > 1260) return "The fire has enough fuel for now.";
+    if (!s.cheats.freeCraft && !can(s, cost)) return "Need " + list(cost) + ".";
+    if (!s.cheats.freeCraft) pay(s, cost);
+    c.fireBuilt = true; c.fuel += 180;
+    note(s, "Field fire fueled for " + c.fuel + " more minutes. Attack risk is lower while it burns.");
+    return "Added 3 hours of fire fuel.";
+  }
   const isNight = (s) => s.hour >= 19 || s.hour < 6;
   const clockMinutes = (s) => s.hour * 60 + (s.minute || 0);
   const dawnHours = (s) => ((360 - clockMinutes(s) + 1440) % 1440 || 1440) / 60;
@@ -607,6 +663,8 @@
       const homeNight = startLoc === "camp" && s.flags.shelter ? (mainLevel(s) >= 1 ? -1 : -2) : -4;
       let warmth = (heavyCoat(gearOf(s, "hero")) ? 1 : night ? homeNight : -1) - (season === "Winter" ? 2 : 0);
       if (startLoc === "camp" && s.flags.fire) warmth += 6;
+      if (fieldCamp(s)?.shelter) warmth += 1;
+      if (fieldCamp(s)?.fuel > 0) warmth += 3;
       warmth += Math.min(2, Math.floor(warmOf(gearOf(s, "hero")) / 6));
       s.warmth += warmth / 60;
       if (night && !s.sleeping) s.energy -= 2 / 60;
@@ -617,17 +675,34 @@
       const before = s.collapses;
       clamp(s);
       if (s.collapses !== before) break;
+      for (const [id, c] of Object.entries(s.fieldCamps || {})) if (c.fuel > 0) {
+        c.fuel--; if (c.fuel === 0 && id === s.loc) note(s, "Your field fire has burned out. Resting here is more dangerous now.");
+      }
+      const c = fieldCamp(s);
+      if (s.sleeping && c?.shelter) {
+        c.restMinutes++;
+        if (c.restMinutes >= 60) {
+          c.restMinutes = 0;
+          if (!s.cheats.safeTravel && !s.cheats.god && random(s) < campRisk(s)) {
+            s.encounter = regionOf(s.loc) === "far" ? regionEncounter(s.loc) : {name: "Dire wolf", hp: 45, max: 45, damage: 10};
+            note(s, "An attack interrupts your rest at the field camp!");
+            break;
+          }
+        }
+      }
     }
   }
   function nap(s, hours) {
     if (guard(s)) return guard(s);
-    if (s.loc !== "camp") return "Return to camp to rest.";
+    if (s.loc !== "camp" && !fieldCamp(s)?.shelter) return "Build a field camp here, or return home to rest.";
     if (![.5, 1, "dawn"].includes(hours)) return "Choose a rest duration.";
     const duration = hours === "dawn" ? dawnHours(s) : hours;
-    const before = s.collapses;
+    const before = s.collapses, started = s.day * 1440 + clockMinutes(s);
     s.sleeping = true; tick(s, duration); s.sleeping = false;
     if (s.collapses !== before) return "You wake after collapsing.";
-    s.energy += ENERGY.nap * duration; clamp(s);
+    const elapsed = (s.day * 1440 + clockMinutes(s) - started) / 60;
+    s.energy += ENERGY.nap * elapsed; clamp(s);
+    if (s.encounter) return "An animal attacks your field camp!";
     note(s, hours === "dawn" ? "You rest by the fire until 6:00 AM." : "You rest by the fire for " + (hours === .5 ? "30 minutes." : "1 hour."));
     return "Rest complete.";
   }
@@ -735,16 +810,25 @@
     const push = (type, id, label, sub, disabled = "", extra = {}) => out.push({ type, id, label, sub, disabled: disabled || busy, ...extra });
     if (s.stranger) push("nearby", "nearby", "Investigate nearby person", "Someone is nearby · speak, offer help, invite or leave", "", { glow: true, disabled: "" });
     if (s.encounter) push("resume-fight", "resume-fight", "Return to the encounter", "Resolve the threat or retreat", "", { glow: true, disabled: "" });
+    if (canCampAt(s.loc)) {
+      const c = fieldCamp(s);
+      if (!c?.shelter) push("field-build", "field-build", "Set up field camp", "Instant · no energy · 4 logs, 6 leaves, 1 rope");
+      else {
+        push("field-fire", "field-fire", c.fuel > 0 ? "Add fuel to field fire" : "Light field fire", "Instant · " + (c.fireBuilt ? "3 logs" : "3 logs, 4 stone") + " · +3 hours of fire");
+        push("rest", "rest", "Sleep here until dawn", Math.round(campRisk(s) * 100) + "% attack chance per hour of rest · fire fuel: " + c.fuel + " minutes");
+        push("nap", "nap", "Rest at field camp", "Choose a duration · attacks can interrupt rest · home camp is safer");
+      }
+    }
     if (p.region === "far") {
       push("warn", "hazard", p.hazard, "Gathering has a 25% hazard chance; retreat to River Camp at any time", "", { info: true });
-      if (s.loc === "observatory" && s.flags.observatoryNotes && !s.flags.farBeacon) push("beacon", "beacon", "Restore the observatory beacon", "30 minutes · 8 energy · 6 rift glass, 4 wire, 4 crystals", "", { quest: true });
+      if (s.loc === "observatory" && s.flags.observatoryNotes && !s.flags.farBeacon) push("beacon", "beacon", "Restore the observatory beacon", "Instant · no energy · 6 rift glass, 4 wire, 4 crystals", "", { quest: true });
     }
     if (s.loc === "camp") {
       const ready = beatReady(s, "talk"), wait = beatWaiting(s);
       push("rest", "rest", "Sleep until dawn", "Until 6:00 AM · full energy with shelter · rough rest without shelter");
       push("nap", "nap", "Rest by the fire", "Choose 30 minutes, 1 hour, or until dawn");
       push("talk", "talk", "Talk with Maya", ready ? "● A quiet moment is ready" : wait || "She has something to say", "", { glow: !!ready });
-      push("build", "build", "Build and craft", "Open the workbench · " + ENERGY.craft + " energy each");
+      push("build", "build", "Build and craft", "Instant crafting · materials only");
       push("refill", "refill", "Fill water bottles", "10 minutes · " + ENERGY.refill + " energy · +3 bottles", tiredWhy(s, ENERGY.refill));
       push("maya", "maya", s.withMaya ? "Leave Maya at camp" : "Take Maya along", s.withMaya ? "She will fish or forage while you are away" : "Herb bonus, ambush warning, combat help");
       if (s.flags.shelter) push("gear", "gear", "Gear and equipment", "Clothing, tools and weapons for you, Maya and your survivors");
@@ -811,6 +895,8 @@
     const a = actionsFor(s).find((x) => x.type === type && x.id === id);
     if (!a) return "That is not possible here.";
     if (a.disabled) return a.disabled;
+    if (type === "field-build") return buildFieldCamp(s);
+    if (type === "field-fire") return lightFieldFire(s);
     if (type === "beacon") return restoreBeacon(s);
     if (type === "gather") return gather(s, id);
     if (type === "hunt") return huntHero(s);
@@ -880,10 +966,17 @@
   }
   function rest(s) {
     if (guard(s)) return guard(s);
-    if (s.loc !== "camp") return "Return to camp to sleep.";
-    const before = s.collapses;
+    if (s.loc !== "camp" && !fieldCamp(s)?.shelter) return "Build a field camp here, or return home to sleep.";
+    const before = s.collapses, started = s.day * 1440 + clockMinutes(s);
     s.sleeping = true; tick(s, dawnHours(s)); s.sleeping = false;
     if (s.collapses !== before) return "You wake after collapsing.";
+    if (s.loc !== "camp") {
+      const elapsed = (s.day * 1440 + clockMinutes(s) - started) / 60;
+      s.energy += elapsed * 12; clamp(s);
+      if (s.encounter) return "An attack interrupts your sleep!";
+      s.health += 10; clamp(s); note(s, "Dawn at your field camp. Your settlement remains safely back in the valley.");
+      return "You wake at the field camp at 6:00 AM.";
+    }
     recover(s, "Sleep until dawn.");
     return "You wake at 6:00 AM.";
   }
@@ -920,7 +1013,7 @@
   function craft(s, id) {
     if (s.drop) collect(s);
     if (s.loc !== "camp") return "Return to camp to use the workbench.";
-    if (s.encounter) return "Resolve the encounter first.";
+    if (guard(s)) return guard(s);
     const lock = recipeLock(s, id), r = recipes[id];
     if (lock) return lock;
     if (s.energy < ENERGY.craft) return "Too tired. Sleep or rest first.";
@@ -932,7 +1025,7 @@
     if (r.heal) s.health += r.heal;
     if (id === "shelter") s.shelters = [{ level: 0 }];
     if (id === "fire") { s.warmth += 20; s.flags.fireBuilt = true; }
-    tick(s, .5);
+    
     note(s, "Built: " + r.title + ".");
     progress(s);
     clamp(s);
@@ -951,7 +1044,7 @@
     if (!s.cheats.freeCraft) pay(s, EXTRA_LEANTO);
     spend(s, ENERGY.craft);
     s.shelters.push({ level: 0 });
-    tick(s, .5);
+    
     note(s, "Built another lean-to. It has room for 1 survivor.");
     progress(s);
     return "Built another lean-to.";
@@ -968,7 +1061,7 @@
     if (!s.cheats.freeCraft) pay(s, up.cost);
     spend(s, ENERGY.craft);
     sh.level++;
-    tick(s, .5);
+    
     note(s, (i === 0 ? "Main lean-to" : "Lean-to " + (i + 1)) + " upgraded to level " + sh.level + ".");
     progress(s);
     return "Upgraded to level " + sh.level + ".";
@@ -1248,6 +1341,8 @@
   }
 
   root.Rift2 = {
+    buildFieldCamp, lightFieldFire, fieldCamp, canCampAt, expeditionHours, campRisk, FIELD_CAMP_COST,
+    resourceUses, QUEST_USES, BEACON_COST,
     isNight, clockMinutes, dawnHours, actionEnergy, nap, returnAndSleep,
     FAR_PLACES, farUnlocked, farObjective, regionOf, restoreBeacon, farHazard, carries,
     KEY, MANUAL_KEY, names, recipes, quests, places, place, beatTitles, TRAIL, CIRCUIT,

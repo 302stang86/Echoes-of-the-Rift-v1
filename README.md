@@ -55,7 +55,7 @@ Autosave key `echoes-rift-v2`; manual save is separate. v1 saves are not compati
 - Gear: shirt, pants, shoes, gloves, coat, tool and weapon slots for you, Maya and every survivor (children can wear clothes only). Clothing and tools upgrade through tiers. Heavy coats on you and Maya also satisfy the Glacier ravine coat requirement. Open Gear and equipment, or Check on survivors, at camp.
 
 ## Time and rest (release 4)
-- Travel durations remain unchanged. Gathering, fishing and hunting take 20 minutes; every object search and water refill takes 10 minutes; crafting, builds, upgrades and other work take 30 minutes. Talking, equipping and assigning chores take no time.
+- Travel durations remain unchanged. Gathering, fishing and hunting take 20 minutes; every object search and water refill takes 10 minutes; crafting, builds and upgrades are instant and use no energy; treating survivors and other work take 30 minutes. Talking, equipping and assigning chores take no time.
 - No automatic curfew, forced return or midnight sleep. The clock displays hours and minutes.
 - Night (7 PM–6 AM) costs 50% more energy for travel and gathering, plus 2 energy per awake hour. Return to camp is available even with no energy.
 - Rest by the fire for 30 minutes, 1 hour, or until dawn. Sleep explicitly until the next 6 AM. Food, water, fires and survivors continue to consume resources while resting.
@@ -69,3 +69,9 @@ The second map is now playable after surviving The Long Winter. See RELEASE-3.md
 
 ## Release 4 validation
 111 automated tests pass. Desktop browser checks verified minute display, rest choices and explicit sleep to 6 AM. Existing saves migrate with minute set to zero.
+
+## Release 5 — Resource purposes and instant crafting
+All 31 inventory resources feed crafting or quests. Pack → What can I make? shows their uses. Added berry travel rations and preserved meat broth. Crafting and building now consume materials only: no time or energy. See RELEASE-5.md and RESOURCE-USES.md. Validation: 122 tests pass.
+
+### Field camps
+Far Shore expeditions (six hours round trip before shortcuts) support field shelters and fires. A lit fire lowers the hourly rest attack chance from 20% to 12%; home rest has no random attack roll. Fuel burns as time passes, attacks interrupt rest, and shelters persist in saves. Camp construction uses materials only.

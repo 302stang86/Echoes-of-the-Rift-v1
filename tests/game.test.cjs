@@ -83,7 +83,7 @@ test("resting restores energy: a nap gives some, sleeping gives all", () => {
   assert.equal(s.energy, 100);
   s.flags.shelter = false;
   s.energy = 1;
-  assert.match(R.craft(s, "rope"), /Too tired/);
+  assert.match(R.craft(s, "rope"), /Not enough materials/);
 });
 
 test("searching refreshes daily with random amounts, and can find nothing", () => {
