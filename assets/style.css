@@ -113,3 +113,5 @@ details{margin:8px 0;border:1px solid var(--line);border-radius:6px;padding:8px 
 @media (max-width:520px){.top .brand{display:none}.dlg-actions button{flex-basis:100%}}
 select{font:inherit;color:var(--ink);background:#0a1b34;border:1px solid var(--line);border-radius:6px;padding:8px;width:100%}
 .clock{font-size:13px}
+
+.recipe .art-panel{width:96px;border-radius:6px;overflow:hidden;align-self:flex-start}

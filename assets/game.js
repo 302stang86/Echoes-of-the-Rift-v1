@@ -5,7 +5,7 @@
   const MANUAL_KEY = "echoes-rift-v2-manual";
 
   const DAILY_LIMIT = 3; // gathers per area per day
-  const ENERGY = { max: 100, gather: 15, search: 8, lore: 3, travel: 10, craft: 8, refill: 5, wolf: 10, bear: 10, ravine: 20, defend: 15, nap: 20 };
+  const ENERGY = { max: 100, gather: 8, search: 4, lore: 2, travel: 4, craft: 4, refill: 2, wolf: 6, bear: 6, ravine: 12, defend: 8, nap: 25 };
   const WILD_CHANCE = 0.15;
   const SEASON_LEN = 20; // days; four seasons make an 80-day year
   const seasonOf = (day) => ["Autumn", "Winter", "Spring", "Summer"][Math.floor(((day - 1) % (SEASON_LEN * 4)) / SEASON_LEN)];
@@ -518,7 +518,7 @@
     }
     if (window_scenes(s)) {
       const left = sceneObjects(s).filter((o) => !searched(s, o)).length;
-      push("search", "search", "Search the area", left + " " + (left === 1 ? "spot" : "spots") + " to search today · " + ENERGY.search + " energy");
+      push("search", "search", "Search the area", left + " " + (left === 1 ? "spot" : "spots") + " to search today · " + ENERGY.search + " energy" + (s.quest >= 2 ? " · may turn up survivors" : ""));
     }
     return out;
   }
@@ -714,7 +714,9 @@
   }
   function maybeStranger(s) {
     if (s.stranger || s.encounter || s.quest < 2 || s.survivors.length >= MAX_SURVIVORS) return;
-    if (random(s) >= (s.flags.signal ? 0.16 : 0.1)) return;
+    s.flags.dry = (s.flags.dry || 0) + 1;
+    if (s.flags.dry < 8 && random(s) >= (s.flags.signal ? 0.2 : 0.14)) return;
+    s.flags.dry = 0;
     s.stranger = makeStranger(s);
     note(s, "You are not alone out here. Someone is nearby.");
   }

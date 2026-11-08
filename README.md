@@ -30,6 +30,8 @@ One screen:
 ## Survivors, lean-tos, seasons (update 3)
 
 - Searching can turn up strangers (about 10% per search once Fresh Catch is done, 16% after the signal). Roughly 75% are women and 25% men, and children stay under 15% of everyone met. Good strangers can be helped (1 herb for a wound, 1 ration otherwise) or brought to camp. Hostile strangers (about 30% of adults) can be fled from (70% success) or fought.
+- Survivors are found only by searching an area (not gathering) once Fresh Catch is done: about 14% per search (20% after the signal), and one is guaranteed after 8 searches without one.
+- Energy costs were halved in update 4: gather 8, search 4, travel 4, craft 4; a nap restores 25.
 - Survivors at camp eat about 1 ration a day (or 2 berries, or 1 fish). Each needs a bed. Without one they lose health every day, fall sick and can die. Check on survivors at camp to assign chores at midnight: gather wood, fish, forage food, tend the fire, tend the injured. Children cannot take chores but sometimes find helpful things. Treat the sick or injured with 1 herb.
 - Lean-tos: you and Maya share the main lean-to. Each extra lean-to gives 1 bed. Three upgrades per lean-to: level 1 warmer nights and security (less wave damage), level 2 more healing from sleep and faster recovery for survivors, level 3 two beds (a main lean-to at level 3 has 2 spare beds).
 - Maya's love story continues. The Riverbank Confession now also needs the main lean-to at level 1 or higher, so Maya ends up living in the upgraded lean-to with you.

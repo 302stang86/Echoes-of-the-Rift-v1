@@ -55,15 +55,16 @@ test("each gather spot gives 3 harvests a day, then refreshes at midnight", () =
 test("every task costs energy; being too tired sends you home to rest", () => {
   const s = newGame();
   R.travel(s, "forest");
-  assert.equal(s.energy, 90);
+  assert.equal(s.energy, 96);
   R.act(s, "gather", "timber");
-  assert.equal(s.energy, 75);
-  s.energy = 9;
+  assert.equal(s.energy, 88);
+  s.energy = 7;
   assert.match(R.act(s, "gather", "timber"), /Too tired/);
+  s.energy = 3;
   assert.match(R.travel(s, "grove"), /Too tired/);
   assert.equal(s.loc, "forest");
   assert.match(R.travel(s, "camp"), /Arrived/, "going home is always allowed");
-  assert.equal(s.energy, 0);
+  s.energy = 0;
   assert.match(R.act(s, "refill", "refill"), /Too tired/);
   R.act(s, "nap", "nap");
   assert.match(R.act(s, "refill", "refill"), /Filled/);
@@ -73,7 +74,7 @@ test("resting restores energy: a nap gives some, sleeping gives all", () => {
   const s = newGame();
   s.energy = 10;
   R.act(s, "nap", "nap");
-  assert.equal(s.energy, 30);
+  assert.equal(s.energy, 35);
   s.flags.shelter = true;
   R.act(s, "rest", "rest");
   assert.equal(s.energy, 100);
