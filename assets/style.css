@@ -136,3 +136,5 @@ select{font:inherit;color:var(--ink);background:#0a1b34;border:1px solid var(--l
 
 .region-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}.region-tabs button{min-height:44px;flex:1}.region-caption{padding:0 4px;margin-bottom:8px}.map-col .map{overflow:hidden}.map-col .pin{min-height:34px}
 @media(max-width:600px){.region-tabs button{font-size:12px;padding:10px 8px}.map-col .pin{font-size:9px;padding:5px 6px;min-height:30px}}
+
+.pin-time{display:block;font-size:10px;line-height:1.2;margin-top:3px;color:#d7eaff}.pin{white-space:nowrap}

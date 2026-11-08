@@ -185,16 +185,16 @@ test("recipe locks: smelter-gated tools and quest gates", () => {
   assert.equal(R.recipeLock(s, "fishing"), "");
 });
 
-test("travel locks follow the quests; fast travel after the signal", () => {
+test("travel locks follow the quests and marked travel times remain after the signal", () => {
   const s = newGame();
   assert.match(R.travelLock(s, "ridge"), /Iron|Fresh/);
   assert.match(R.travelLock(s, "glacier"), /coats/);
   assert.match(R.travelLock(s, "monolith"), /monolith/);
   s.quest = 4;
   assert.equal(R.travelLock(s, "ravine"), "");
-  assert.equal(R.travelHours(s, "forest"), 2);
+  assert.equal(R.travelHours(s, "forest"), 2.5);
   s.flags.signal = true; s.visited.forest = true;
-  assert.equal(R.travelHours(s, "forest"), 1);
+  assert.equal(R.travelHours(s, "forest"), 2.5);
 });
 
 test("combat: spear hits harder, traps work, Maya reduces damage, victory drops a ration", () => {

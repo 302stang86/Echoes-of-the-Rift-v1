@@ -614,14 +614,16 @@
     progress(s);
   }
   const FIELD_CAMP_COST = {log: 4, leaf: 6, rope: 1};
-  // Use the original route distance, so a later fast-travel unlock never removes a campsite.
-  const expeditionHours = (id) => regionOf(id) === "far" ? 6 : 4;
-  const canCampAt = (id) => id !== "camp" && expeditionHours(id) >= 6;
+  const HOME_TRAVEL_HOURS = {camp: 0, forest: 2.5, river: 1.5, ravine: 1, ridge: 3.5, meadow: 3.5, totem: 4, grove: 5, den: 5, monolith: 5, rift: 6.5, coast: 7, glacier: 8};
+  const homeTravelHours = (id) => HOME_TRAVEL_HOURS[id] ?? (regionOf(id) === "far" ? 3 : 2);
+  const expeditionHours = (id) => homeTravelHours(id) * 2;
+  // Any destination at least five hours round trip from home supports a field camp.
+  const canCampAt = (id) => id !== "camp" && expeditionHours(id) >= 5;
   const fieldCamp = (s) => s.fieldCamps?.[s.loc];
   const campRisk = (s) => s.loc === "camp" ? 0 : fieldCamp(s)?.fuel > 0 ? .12 : .20;
   function buildFieldCamp(s) {
     if (guard(s)) return guard(s);
-    if (!canCampAt(s.loc)) return "Field camps are available on expeditions of six or more hours round trip.";
+    if (!canCampAt(s.loc)) return "Field camps are available at destinations five or more hours round trip from home.";
     if (fieldCamp(s)?.shelter) return "A field shelter already stands here.";
     if (!s.cheats.freeCraft && !can(s, FIELD_CAMP_COST)) return "Need 4 logs, 6 leaves and 1 rope.";
     if (!s.cheats.freeCraft) pay(s, FIELD_CAMP_COST);
@@ -1206,7 +1208,15 @@
     if (p.gate && s.quest < p.gate) return "Complete “" + quests[p.gate - 1].title + "” to reach " + p.name + ".";
     return "";
   }
-  const travelHours = (s, id) => (s.cheats.fastTravel || (s.flags.riftgate && (regionOf(s.loc) === "far" || regionOf(id) === "far")) || (s.flags.signal && s.visited[id]) ? 1 : regionOf(s.loc) !== regionOf(id) ? 3 : 2);
+  function travelHours(s, id) {
+    if (s.loc === id) return 0;
+    if (s.cheats.fastTravel) return 1;
+    const fromFar = regionOf(s.loc) === "far", toFar = regionOf(id) === "far";
+    if (fromFar && toFar) return s.flags.riftgate ? 1 : 2;
+    if (fromFar || toFar) return (s.flags.riftgate ? 1 : 3) + homeTravelHours(fromFar ? id : s.loc);
+    // Map labels are one-way routes to River Camp. Other valley trips follow both legs.
+    return homeTravelHours(s.loc) + homeTravelHours(id);
+  }
   function travel(s, id) {
     if (s.drop) collect(s);
     if (s.encounter) return "Resolve the encounter first.";
@@ -1341,6 +1351,7 @@
   }
 
   root.Rift2 = {
+    HOME_TRAVEL_HOURS, homeTravelHours,
     buildFieldCamp, lightFieldFire, fieldCamp, canCampAt, expeditionHours, campRisk, FIELD_CAMP_COST,
     resourceUses, QUEST_USES, BEACON_COST,
     isNight, clockMinutes, dawnHours, actionEnergy, nap, returnAndSleep,

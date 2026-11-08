@@ -75,3 +75,6 @@ All 31 inventory resources feed crafting or quests. Pack → What can I make? sh
 
 ### Field camps
 Far Shore expeditions (six hours round trip before shortcuts) support field shelters and fires. A lit fire lowers the hourly rest attack chance from 20% to 12%; home rest has no random attack roll. Fuel burns as time passes, attacks interrupt rest, and shelters persist in saves. Camp construction uses materials only.
+
+## Release 6 — Map travel and five-hour camping threshold
+Valley routes now use the hours marked on the supplied map, displayed on every destination pin. Returns are symmetric; inter-area travel follows both camp legs. Field camps are available at five or more hours round trip (including Forest at exactly five). See RELEASE-6.md for the full table. Signal unlocks no longer override the marked valley times. Validation: 126 tests pass.
