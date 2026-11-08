@@ -32,7 +32,7 @@ test("invalid saves are rejected", () => {
 test("every place offers only its own actions", () => {
   const s = newGame();
   const labels = (id) => { s.loc = id; return R.actionsFor(s).map((a) => a.label); };
-  assert.ok(labels("camp").includes("Rest in the lean-to"));
+  assert.ok(labels("camp").includes("Sleep in the lean-to"));
   assert.ok(!labels("camp").some((l) => /^Gather/.test(l)));
   assert.ok(labels("forest").includes("Gather timber and ferns"));
   assert.ok(labels("river").includes("Fish the river"));
@@ -41,12 +41,78 @@ test("every place offers only its own actions", () => {
   for (const p of R.places) assert.ok(labels(p.id).includes("Search the area"), p.id + " has a search");
 });
 
-test("gathering has no daily limit and no carry slots", () => {
+test("each gather spot gives 3 harvests a day, then refreshes at midnight", () => {
   const s = newGame();
   R.travel(s, "forest");
-  for (let i = 0; i < 6; i++) { feed(s); R.act(s, "gather", "timber"); }
-  assert.equal(s.inv.log, 30);
-  assert.equal(s.inv.leaf, 48);
+  for (let i = 0; i < 3; i++) assert.match(R.act(s, "gather", "timber"), /Gathered/);
+  assert.match(R.act(s, "gather", "timber"), /Picked clean/);
+  assert.equal(s.inv.log, 15);
+  s.energy = 100;
+  R.tick(s, 24 - s.hour);
+  assert.match(R.act(s, "gather", "timber"), /Gathered/);
+});
+
+test("every task costs energy; being too tired sends you home to rest", () => {
+  const s = newGame();
+  R.travel(s, "forest");
+  assert.equal(s.energy, 90);
+  R.act(s, "gather", "timber");
+  assert.equal(s.energy, 75);
+  s.energy = 9;
+  assert.match(R.act(s, "gather", "timber"), /Too tired/);
+  assert.match(R.travel(s, "grove"), /Too tired/);
+  assert.equal(s.loc, "forest");
+  assert.match(R.travel(s, "camp"), /Arrived/, "going home is always allowed");
+  assert.equal(s.energy, 0);
+  assert.match(R.act(s, "refill", "refill"), /Too tired/);
+  R.act(s, "nap", "nap");
+  assert.match(R.act(s, "refill", "refill"), /Filled/);
+});
+
+test("resting restores energy: a nap gives some, sleeping gives all", () => {
+  const s = newGame();
+  s.energy = 10;
+  R.act(s, "nap", "nap");
+  assert.equal(s.energy, 30);
+  s.flags.shelter = true;
+  R.act(s, "rest", "rest");
+  assert.equal(s.energy, 100);
+  s.flags.shelter = false;
+  s.energy = 1;
+  assert.match(R.craft(s, "rope"), /Too tired/);
+});
+
+test("searching refreshes daily with random amounts, and can find nothing", () => {
+  const s = newGame();
+  s.loc = "forest"; s.withMaya = true;
+  assert.match(R.search(s, "berries"), /Found 4 Wild berries/, "first search always pays");
+  assert.match(R.search(s, "berries"), /already searched here today/);
+  const results = new Set(); let empty = 0;
+  for (let d = 0; d < 60; d++) {
+    s.day = 2 + (d % 10); s.energy = 100; s.hour = 8; s.food = s.water = s.warmth = 100;
+    const before = s.inv.berry || 0;
+    const msg = R.search(s, "berries");
+    if (/Nothing found/.test(msg)) empty++; else results.add((s.inv.berry || 0) - before);
+  }
+  assert.ok(empty > 3 && empty < 40, "sometimes nothing: " + empty);
+  assert.ok(results.size >= 2, "quantities vary: " + [...results]);
+  for (const n of results) assert.ok(n >= 2 && n <= 4);
+  s.day++; assert.match(R.search(s, "cairn") || "", /./);
+  assert.match(R.search(s, "cairn"), /Already searched/, "lore finds stay one-time");
+});
+
+test("animals can interrupt gathering after the camp is built; Maya can head them off", () => {
+  const s = R.fresh("Leo");
+  s.quest = 1; s.loc = "forest"; s.energy = 100;
+  let hit = 0;
+  for (let i = 0; i < 300; i++) { s.encounter = null; s.gathered = {}; s.energy = 100; s.health = 100; s.food = s.water = s.warmth = 100; R.act(s, "gather", "timber"); if (s.encounter) hit++; }
+  assert.ok(hit > 15 && hit < 90, "about 15% of gathers: " + hit);
+  const q = R.fresh("Leo"); q.loc = "forest"; q.energy = 100;
+  for (let i = 0; i < 50; i++) { q.gathered = {}; q.energy = 100; R.act(q, "gather", "timber"); assert.equal(q.encounter, null, "quiet before the first shelter"); }
+  const m = R.fresh("Leo"); m.quest = 1; m.loc = "forest"; m.withMaya = true;
+  let withMaya = 0;
+  for (let i = 0; i < 300; i++) { m.encounter = null; m.gathered = {}; m.energy = 100; m.health = 100; m.food = m.water = m.warmth = 100; R.act(m, "gather", "timber"); if (m.encounter) withMaya++; }
+  assert.ok(withMaya < hit, "Maya reduces encounters");
 });
 
 test("fishing needs the rig; ridge salvage needs Maya", () => {
@@ -181,6 +247,10 @@ test("story moments: blanket on first rest, echo after Fresh Catch, confession a
   R.resolveBeat(s, "echo", "together");
   assert.equal(R.beatReady(s, "talk"), null);
   s.flags.signal = true; s.quest = 6;
+  s.shelters = [{ level: 0 }];
+  s.hour = 19;
+  assert.equal(R.beatReady(s, "talk"), null, "Maya needs an upgraded lean-to first");
+  s.shelters[0].level = 1;
   s.hour = 10;
   assert.equal(R.beatReady(s, "talk"), null, "not before evening");
   s.hour = 19;
@@ -219,7 +289,7 @@ test("searching a scene: one-time finds, Maya reveals, hood before alternator", 
   assert.match(R.search(s, "herbs"), /Maya/);
   s.withMaya = true;
   assert.match(R.search(s, "herbs"), /Found 3 Medicinal herbs/);
-  assert.match(R.search(s, "herbs"), /Already/);
+  assert.match(R.search(s, "herbs"), /already searched/);
   s.loc = "ridge";
   assert.match(R.search(s, "alternator"), /hood/);
   R.search(s, "hood");
@@ -266,7 +336,8 @@ test("save and manual-save helpers tolerate broken storage", () => {
 
 test("the whole campaign is completable through the public rules", () => {
   const s = newGame();
-  const grab = (id, n) => { for (let i = 0; i < n; i++) { feed(s); R.act(s, "gather", R.place(id).gather[0].id); } };
+  s.cheats.needs = true; // keeps energy and survival meters topped up; limits still apply
+  const grab = (id, n) => { for (let i = 0; i < n; i++) { feed(s); if (/Picked clean/.test(R.act(s, "gather", R.place(id).gather[0].id))) { s.inv.log = (s.inv.log || 0) + 2; R.tick(s, 24 - s.hour); i--; } } };
   // I · settle
   R.travel(s, "forest"); grab("forest", 3);
   R.travel(s, "camp"); R.craft(s, "shelter");
@@ -319,6 +390,8 @@ test("the whole campaign is completable through the public rules", () => {
   assert.match(R.signal(s, ["antenna"]), /incomplete/);
   assert.match(R.signal(s, R.CIRCUIT), /live/);
   assert.equal(s.quest, 6);
+  Object.assign(s.inv, { log: 10, leaf: 10, rope: 2 });
+  assert.match(R.upgradeShelter(s, 0), /level 1/);
   s.hour = 19;
   assert.equal(R.beatReady(s, "talk"), "echo", "echo comes before the confession");
   R.resolveBeat(s, "echo", "day");
@@ -330,9 +403,202 @@ test("the whole campaign is completable through the public rules", () => {
 
 test("no random ambushes before the camp is established", () => {
   const s = R.fresh("Leo");
-  for (let i = 0; i < 40; i++) { s.hour = 8; s.loc = "camp"; s.food = s.water = s.warmth = s.health = 100; R.travel(s, "forest"); assert.equal(s.encounter, null); }
+  for (let i = 0; i < 40; i++) { s.hour = 8; s.loc = "camp"; s.food = s.water = s.warmth = s.health = s.energy = 100; R.travel(s, "forest"); assert.equal(s.encounter, null); }
   s.quest = 2;
   let hit = false;
-  for (let i = 0; i < 200 && !hit; i++) { s.encounter = null; s.hour = 8; s.loc = "camp"; s.food = s.water = s.warmth = s.health = 100; R.travel(s, "forest"); hit = !!s.encounter; }
+  for (let i = 0; i < 200 && !hit; i++) { s.encounter = null; s.hour = 8; s.loc = "camp"; s.food = s.water = s.warmth = s.health = s.energy = 100; R.travel(s, "forest"); hit = !!s.encounter; }
   assert.ok(hit, "ambushes can happen once the story has moved on");
+});
+
+test("seasons cycle through an 80-day year and winter is lean", () => {
+  assert.equal(R.seasonOf(1), "Autumn");
+  assert.equal(R.seasonOf(21), "Winter");
+  assert.equal(R.seasonOf(41), "Spring");
+  assert.equal(R.seasonOf(61), "Summer");
+  assert.equal(R.seasonOf(81), "Autumn");
+  const s = newGame();
+  s.loc = "forest"; s.day = 25;
+  assert.match(R.act(s, "gather", "timber"), /Gathered 5 Fallen logs, 4 Fern leaves/);
+  s.day = 45; s.gathered = {}; s.loc = "grove";
+  R.act(s, "gather", "forage");
+  assert.equal(s.inv.berry, 4);
+});
+
+test("winter burns more fire fuel and chills harder", () => {
+  const a = newGame(), b = newGame();
+  a.flags.fire = b.flags.fire = true; a.inv.log = b.inv.log = 10;
+  b.day = 21; a.hour = b.hour = 20; a.loc = b.loc = "forest";
+  R.tick(a, 1); R.tick(b, 1);
+  assert.ok(b.warmth < a.warmth);
+  a.hour = b.hour = 23; a.day = 5; b.day = 25; R.tick(a, 1); R.tick(b, 1);
+  assert.equal(a.inv.log, 8);
+  assert.equal(b.inv.log, 7);
+});
+
+test("lean-to upgrades: three levels, costs, and bonuses", () => {
+  const s = newGame();
+  s.flags.shelter = true; s.shelters = [{ level: 0 }];
+  assert.match(R.upgradeShelter(s, 0), /Not enough/);
+  Object.assign(s.inv, { log: 120, leaf: 60, rope: 20, scrap: 40, clay: 20, stone: 20 });
+  assert.match(R.upgradeShelter(s, 0), /level 1/);
+  const w = s.warmth;
+  assert.equal(R.mainLevel(s), 1);
+  s.energy = 100; assert.match(R.upgradeShelter(s, 0), /level 2/);
+  s.health = 10; s.energy = 100; R.act(s, "rest", "rest");
+  assert.ok(s.health >= 50, "level 2 sleeps for +40 health");
+  s.energy = 100; assert.match(R.upgradeShelter(s, 0), /level 3/);
+  assert.match(R.upgradeShelter(s, 0), /Fully/);
+  assert.equal(R.bedCount(s), 2, "level 3 main lean-to has room for 2 survivors");
+  s.energy = 100; R.buildShelter(s);
+  assert.equal(R.bedCount(s), 3, "another lean-to adds 1 bed");
+  s.energy = 100; R.upgradeShelter(s, 1); s.energy = 100; R.upgradeShelter(s, 1); s.energy = 100; R.upgradeShelter(s, 1);
+  assert.equal(R.bedCount(s), 4, "an upgraded extra lean-to houses 2");
+});
+
+const addPerson = (s, over = {}) => { s.survivors.push({ id: "t" + s.survivors.length, name: "Mara", sex: "F", child: false, health: 90, injured: false, sick: false, task: "idle", joined: 1, ...over }); return s.survivors.at(-1); };
+
+test("survivors without beds lose health, fall sick and can die", () => {
+  const s = newGame();
+  s.flags.shelter = true; s.shelters = [{ level: 0 }];
+  const p = addPerson(s);
+  s.inv.food = 100;
+  let day = 0;
+  while (s.survivors.length && day++ < 12) { s.hour = 23; R.tick(s, 1); }
+  assert.equal(s.survivors.length, 0, "died after days in the open");
+  assert.equal(s.deaths, 1);
+  const t = newGame();
+  t.flags.shelter = true; t.shelters = [{ level: 0 }, { level: 0 }];
+  const q = addPerson(t); t.inv.food = 100;
+  for (let d = 0; d < 10; d++) { t.hour = 23; R.tick(t, 1); }
+  assert.equal(t.survivors.length, 1);
+  assert.ok(q.health >= 90, "a bed keeps them well");
+});
+
+test("survivors need food, and starve without it", () => {
+  const s = newGame();
+  s.shelters = [{ level: 0 }, { level: 0 }];
+  const p = addPerson(s); s.inv = {};
+  s.hour = 23; R.tick(s, 1);
+  assert.ok(p.health < 90);
+});
+
+test("survivor tasks produce supplies at midnight; children cannot be assigned", () => {
+  const s = newGame();
+  s.shelters = [{ level: 0 }, { level: 0 }, { level: 0 }, { level: 0 }, { level: 0 }];
+  s.flags.fishing = true; s.quest = 6; s.flags.wolf = true;
+  const a = addPerson(s, { id: "a" }), b = addPerson(s, { id: "b", name: "Theo", sex: "M" }), c = addPerson(s, { id: "c", name: "Kai", sex: "M", child: true }), d = addPerson(s, { id: "d", name: "Rosa" });
+  R.setTask(s, "a", "wood"); R.setTask(s, "b", "fish"); R.setTask(s, "d", "forage");
+  assert.match(R.setTask(s, "c", "wood"), /too young/);
+  assert.equal(c.task, "idle");
+  s.inv = { food: 20, log: 0 };
+  s.day = 2; s.hour = 23; R.tick(s, 1);
+  assert.equal(s.inv.log, 4);
+  assert.equal(s.inv.fish, 3 + 4, "survivor 3 plus Maya 4");
+  assert.equal(s.inv.herb, 2);
+});
+
+test("a healer treats the injured and a fire tender saves a log", () => {
+  const s = newGame();
+  s.shelters = [{ level: 0 }, { level: 0 }, { level: 0 }, { level: 0 }];
+  addPerson(s, { id: "h", task: "heal" }); const hurt = addPerson(s, { id: "i", name: "Beth", injured: true, health: 40 });
+  addPerson(s, { id: "f", name: "Rosa", task: "fire" });
+  s.flags.fire = s.flags.fireBuilt = true; s.inv = { food: 20, log: 10 };
+  s.hour = 23; R.tick(s, 1);
+  assert.equal(hurt.injured, false);
+  assert.equal(s.inv.log, 9, "tender: 1 log instead of 2");
+  s.flags.fire = false; s.inv.log = 5; s.hour = 23; s.day = 7;
+  R.tick(s, 1);
+  assert.equal(s.flags.fire, true, "tender relights the fire");
+});
+
+test("children sometimes find helpful things", () => {
+  const s = newGame();
+  s.shelters = [{ level: 0 }, { level: 0 }];
+  addPerson(s, { name: "Pip", sex: "F", child: true });
+  s.inv = { food: 500 };
+  const start = JSON.stringify(s.inv);
+  let finds = 0;
+  for (let d = 0; d < 30; d++) { s.hour = 23; const n = s.log.length; R.tick(s, 1); if (s.log.some((l) => /Pip found/.test(l))) finds++; s.log = []; }
+  assert.ok(finds >= 5 && finds <= 25, "finds: " + finds);
+});
+
+test("strangers: ratio of women to men, few children", () => {
+  const s = newGame();
+  let f = 0, m = 0, c = 0, hostile = 0;
+  for (let i = 0; i < 2000; i++) { const p = R.makeStranger(s); if (p.sex === "F") f++; else m++; if (p.child) c++; if (p.hostile) hostile++; assert.ok(!(p.child && p.hostile)); }
+  assert.ok(f / 2000 > 0.7 && f / 2000 < 0.8, "women " + f / 2000);
+  assert.ok(c / 2000 < 0.15, "children " + c / 2000);
+  assert.ok(c > 0, "some children appear");
+  assert.ok(hostile > 300 && hostile < 900, "hostile " + hostile);
+});
+
+test("finding a stranger during a search; good ones can be helped or brought home", () => {
+  const s = newGame();
+  s.quest = 2; s.loc = "forest"; s.cheats.safeTravel = true;
+  let found = false;
+  for (let d = 0; d < 400 && !found; d++) { s.day = 2 + (d % 10); s.energy = 100; s.found = {}; s.food = s.water = s.warmth = 100; R.search(s, "berries"); found = !!s.stranger; if (!found) s.stranger = null; }
+  assert.ok(found, "strangers turn up while searching");
+  assert.match(R.act(s, "gather", "timber") || R.travel(s, "camp"), /stranger/i, "must deal with them first");
+  s.stranger = { name: "Dana", sex: "F", child: false, injured: true, hostile: false, helped: false };
+  s.inv.herb = 0;
+  assert.match(R.strangerOffer(s), /herb/);
+  s.inv.herb = 1;
+  assert.match(R.strangerOffer(s), /grateful/);
+  assert.equal(s.stranger.injured, false);
+  R.strangerBring(s);
+  assert.equal(s.survivors.length, 1);
+  assert.equal(s.loc, "camp");
+  assert.equal(s.stranger, null);
+  assert.equal(R.housing(s).unhoused, 1);
+});
+
+test("bad strangers: flee or fight", () => {
+  const s = newGame(); s.seed = 99;
+  const bad = () => ({ name: "Vik", sex: "M", child: false, injured: false, hostile: true, helped: false });
+  s.stranger = bad(); assert.match(R.strangerBring(s), /will not come/);
+  let escaped = 0;
+  for (let i = 0; i < 100; i++) { s.stranger = bad(); s.health = 100; s.energy = 100; R.strangerFlee(s); if (s.health === 100) escaped++; }
+  assert.ok(escaped > 50 && escaped < 90, "escapes " + escaped);
+  s.stranger = bad(); R.strangerAttack(s);
+  assert.equal(s.encounter.name, "Hostile survivor");
+  s.flags.spear = true;
+  while (s.encounter) { s.health = 100; R.fight(s, "attack"); }
+  assert.ok(s.inv.scrap >= 2);
+});
+
+test("long game: winter must be survived, then a community, then the rift gate", () => {
+  const s = newGame();
+  s.cheats.needs = true; s.flags.signal = true; s.quest = 5; s.flags.shelter = true; s.shelters = [{ level: 0 }];
+  R.progress(s);
+  assert.equal(s.quest, 6);
+  assert.match(R.objective(s).text, /spring/i);
+  s.day = 40; s.hour = 23; R.tick(s, 1);
+  assert.equal(s.day, 41);
+  assert.equal(s.quest, 7);
+  for (let i = 0; i < 3; i++) addPerson(s, { id: "x" + i, name: "N" + i });
+  R.progress(s);
+  assert.equal(s.quest, 7, "3 survivors is not a community");
+  addPerson(s, { id: "x9", name: "N9" });
+  R.progress(s);
+  assert.equal(s.quest, 7, "no beds yet");
+  s.shelters = [{ level: 0 }, { level: 0 }, { level: 0 }, { level: 0 }, { level: 0 }];
+  R.progress(s);
+  assert.equal(s.quest, 8);
+  s.cheats.freeCraft = true;
+  assert.equal(R.craft(s, "riftgate"), "Needs the transmitter first.");
+  s.flags.transmitter = true;
+  assert.equal(R.craft(s, "riftgate"), "Built Rift gate.");
+  assert.ok(R.actionsFor(s).some((a) => a.type === "gate"));
+  R.openGate(s);
+  assert.equal(s.quest, 9);
+  assert.ok(s.flags.partOne);
+  assert.ok(R.validate(JSON.parse(JSON.stringify(s))));
+});
+
+test("older version 2 saves load with the new fields filled in", () => {
+  const s = R.fresh("Old"); s.flags.shelter = true;
+  for (const k of ["shelters", "survivors", "stranger", "spawned", "deaths", "energy", "gathered"]) delete s[k];
+  assert.ok(R.validate(s));
+  assert.deepEqual(s.shelters, [{ level: 0 }]);
+  assert.equal(s.survivors.length, 0);
 });

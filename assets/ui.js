@@ -38,7 +38,7 @@
     return dlg;
   }
   const closeModal = () => { if (dlg.open) dlg.close(); };
-  const hhmm = (h) => String(h).padStart(2, "0") + ":00";
+  const hhmm = (h) => (h % 12 || 12) + ":00 " + (h < 12 ? "AM" : "PM");
 
   // Run one game action, then save, redraw and react to whatever happened.
   function commit(fn) {
@@ -47,9 +47,11 @@
     save(); render();
     if (S.collapses !== c) showCollapse();
     else if (S.encounter) showEncounter(msg);
+    else if (S.stranger) showStranger(msg);
     else if (S.pending) { const id = S.pending; S.pending = null; save(); showBeat(id); }
     else if (msg) toast(msg);
-    if (S.quest !== q && S.quest === 6) toast("The signal is live. The valley is yours to explore.", 6000);
+    if (S.quest !== q && S.quest === 6) toast("The signal is live. But the story is not over. Winter is coming.", 6000);
+    else if (S.quest !== q && S.quest < 9) toast("Quest complete: " + R.quests[q].title + ". Next: " + R.objective(S).title + ".", 5000);
   }
 
   /* ---------- title and prologue ---------- */
@@ -91,7 +93,7 @@
   function intro() {
     if (S.flags.intro) return;
     S.flags.intro = true; save();
-    modal("How this works", `<p>Three things are always on screen.</p><div class="lines"><p><b>Next step</b>The banner at the top tells you what to do now, and the glowing pin on the map shows where.</p><p><b>Map</b>Pick a place, then Travel. Travel takes 2 hours.</p><p><b>Here</b>Everything you can do where you are standing, in one list.</p></div><p class="tiny">Hunger, thirst and cold rise slowly. If you collapse, Maya will find you.</p>`, [["Start at camp", null, "primary"]]);
+    modal("How this works", `<p>Three things are always on screen.</p><div class="lines"><p><b>Next step</b>The banner at the top tells you what to do now, and the glowing pin on the map shows where.</p><p><b>Map</b>Pick a place, then Travel. Travel takes 2 hours and some energy.</p><p><b>Here</b>Everything you can do where you are standing, in one list.</p></div><p class="tiny">Every task spends energy. When you run low, head back to camp and rest or sleep. Gathering spots give 3 harvests a day and refresh at midnight. Seasons change every 20 days, and winter is hard. You may meet other survivors while searching. If you collapse, Maya will find you.</p>`, [["Start at camp", null, "primary"]]);
   }
 
   /* ---------- the hub ---------- */
@@ -108,10 +110,10 @@
       const cls = ["pin", R.travelLock(S, p.id) ? "locked" : "", p.id === S.loc ? "current" : "", p.id === selected ? "selected" : "", goal.place === p.id ? "goal-pin" : ""].join(" ");
       return `<button class="${cls}" data-pin="${p.id}" style="left:${(p.x / 1376) * 100}%;top:${(p.y / 768) * 100}%" aria-label="${esc(p.name)}${p.id === S.loc ? ", you are here" : ""}${R.travelLock(S, p.id) ? ", locked" : ""}">${p.id === S.loc ? "◆ " : goal.place === p.id ? "★ " : ""}${p.label}</button>`;
     }).join("");
-    const travelBtn = `<button class="primary ${lock ? "locked" : ""}" id="go" ${lock ? 'aria-disabled="true"' : ""}>Travel to ${esc(sel.name)} · ${R.travelHours(S, sel.id)} hours</button>`;
+    const travelBtn = `<button class="primary ${lock ? "locked" : ""}" id="go" ${lock ? 'aria-disabled="true"' : ""}>Travel to ${esc(sel.name)} · ${R.travelHours(S, sel.id)} hours · ${R.ENERGY.travel} energy</button>`;
     app.innerHTML = `
-    <header class="top"><span class="brand">ECHOES OF THE RIFT</span><span class="clock">${night ? "☾" : "☀"} Day ${S.day} · ${hhmm(S.hour)}</span>
-      <div class="meters">${meter("Health", S.health)}${meter("Food", S.food)}${meter("Water", S.water)}${meter("Warmth", S.warmth)}</div>
+    <header class="top"><span class="brand">ECHOES OF THE RIFT</span><span class="clock">${night ? "☾" : "☀"} ${R.seasonOf(S.day)} · Day ${S.day} · ${hhmm(S.hour)}</span>
+      <div class="meters">${meter("Health", S.health)}${meter("Food", S.food)}${meter("Water", S.water)}${meter("Warmth", S.warmth)}${meter("Energy", S.energy)}</div>
       <div class="row"><button id="eat" aria-label="Eat">Eat</button><button id="drink" aria-label="Drink">Drink</button><button id="pack">Pack</button><button id="journal">Journal</button><button id="menu">Menu${S.cheats.everUsed ? " · cheats used" : ""}</button></div></header>
     <main class="hub">
       <section class="card goal" aria-label="Next step"><div><div class="eyebrow">Next step · ${esc(goal.title)}</div><p>${esc(goal.text)}</p></div>${goal.place && goal.place !== selected ? `<button id="show-goal">Show on map ★</button>` : ""}</section>
@@ -135,6 +137,8 @@
     if (a.type === "search") return showSearch();
     if (a.type === "ravine") return showRavine();
     if (a.type === "wire") return showWiring();
+    if (a.type === "survivors") return showSurvivors();
+    if (a.type === "gate") return showGateConfirm();
     if (a.type === "talk") return commit(() => R.talk(S));
     commit(() => R.act(S, a.type, a.id));
   }
@@ -148,7 +152,17 @@
       return { html, rank: can ? 0 : lock ? 2 : 1, lock };
     }).filter((r) => r.lock !== "Already built.").sort((a, b) => a.rank - b.rank);
     const open = rows.filter((r) => r.rank < 2).map((r) => r.html).join(""), later = rows.filter((r) => r.rank === 2);
-    modal("Build and craft", `<p class="tiny">Each build takes 1 hour. Green means you have enough. Ready items come first.</p><div class="recipes">${open || "<p>Nothing else to build right now.</p>"}</div>${later.length ? `<details><summary>Not available yet · ${later.length}</summary><div class="recipes">${later.map((r) => r.html).join("")}</div></details>` : ""}`, [["Close"]], { wide: true });
+    const costChips = (c) => Object.entries(c).map(([k, n]) => chip(k, n)).join("");
+    const okCost = (c) => S.cheats.freeCraft || R.can(S, c);
+    const leantos = S.flags.shelter ? `<details open><summary>Lean-tos · ${S.shelters.length} built</summary><p class="tiny">You and Maya share the main lean-to. Each rescued survivor needs a bed, or they will fall sick. Another lean-to gives 1 bed. A lean-to at level 3 gives 2 beds.</p><div class="recipes">${S.shelters.map((sh, i) => { const up = R.SHELTER_UPGRADES[sh.level]; return `<article class="recipe"><h3>${i === 0 ? "Main lean-to" : "Lean-to " + (i + 1)}</h3><p>Level ${sh.level} of 3 · ${i === 0 ? "you and Maya" : sh.level >= 3 ? "2 survivors" : "1 survivor"}${i === 0 && sh.level >= 3 ? " + 2 survivors" : ""}</p>${up ? `<p>Next: ${up.desc}</p><div class="chips">${costChips(up.cost)}</div><button data-upg="${i}" class="${okCost(up.cost) ? "primary" : ""}" ${okCost(up.cost) ? "" : 'aria-disabled="true"'}>${okCost(up.cost) ? "Upgrade to level " + (sh.level + 1) : "Not enough materials"}</button>` : "<p>Fully upgraded.</p>"}</article>`; }).join("")}${S.shelters.length < R.MAX_LEANTOS ? `<article class="recipe"><h3>Another lean-to</h3><p>Room for 1 more survivor.</p><div class="chips">${costChips(R.EXTRA_LEANTO)}</div><button data-newleanto class="${okCost(R.EXTRA_LEANTO) ? "primary" : ""}" ${okCost(R.EXTRA_LEANTO) ? "" : 'aria-disabled="true"'}>${okCost(R.EXTRA_LEANTO) ? "Build" : "Not enough materials"}</button></article>` : ""}</div></details>` : "";
+    modal("Build and craft", `<p class="tiny">Each build takes 1 hour and ${R.ENERGY.craft} energy. Green means you have enough. Ready items come first.</p>${leantos}<div class="recipes">${open || "<p>Nothing else to build right now.</p>"}</div>${later.length ? `<details><summary>Not available yet · ${later.length}</summary><div class="recipes">${later.map((r) => r.html).join("")}</div></details>` : ""}`, [["Close"]], { wide: true });
+    $$("[data-upg]", dlg).forEach((b) => (b.onclick = () => {
+      if (b.getAttribute("aria-disabled")) return toast("Not enough materials.");
+      const c = S.collapses, q = S.quest; const msg = R.upgradeShelter(S, +b.dataset.upg); save(); render(); toast(msg);
+      if (S.collapses !== c) return showCollapse(); showBuild();
+    }));
+    const nl = $("[data-newleanto]", dlg);
+    if (nl) nl.onclick = () => { if (nl.getAttribute("aria-disabled")) return toast("Not enough materials."); const c = S.collapses; const msg = R.buildShelter(S); save(); render(); toast(msg); if (S.collapses !== c) return showCollapse(); showBuild(); };
     $$("[data-build]", dlg).forEach((b) => (b.onclick = () => {
       if (b.getAttribute("aria-disabled")) return toast(b.textContent);
       const id = b.dataset.build, q = S.quest, c = S.collapses; const msg = R.craft(S, id); save(); render();
@@ -191,11 +205,11 @@
     const objs = R.sceneObjects(S), sc = window.SCENES[S.loc];
     if (!sceneSel || !objs.some((o) => o.id === sceneSel)) sceneSel = objs[0]?.id;
     const draw = () => {
-      const o = objs.find((x) => x.id === sceneSel), found = R.isFound(S, o.id), why = found ? "" : R.objectReason(S, o), vis = R.objectVisible(S, o);
-      const hot = objs.map((x, i) => `<button class="hot ${R.isFound(S, x.id) ? "found" : ""} ${x.id === sceneSel ? "sel" : ""} ${!R.objectVisible(S, x) ? "hidden" : ""}" data-obj="${x.id}" style="left:${x.x}%;top:${x.y}%" aria-label="Examine ${esc(R.objectVisible(S, x) ? x.name : "something hidden")}">${R.isFound(S, x.id) ? "✓" : R.objectVisible(S, x) ? i + 1 : "?"}</button>`).join("");
-      const list = objs.map((x) => `<button data-obj="${x.id}" class="${x.id === sceneSel ? "sel" : ""}">${R.isFound(S, x.id) ? "✓ " : "◇ "}${esc(R.objectVisible(S, x) ? x.name : "Something hidden")}</button>`).join("");
-      const loot = Object.keys(o.loot).length ? " · " + R.list(o.loot) : "";
-      modal(esc(sc.title), `<p>${esc(sc.intro)}</p><div class="search-grid"><div><div class="scene">${panel(sc.art)}${hot}</div><div class="objs">${list}</div></div><div class="card"><h3>${esc(vis ? o.name : "Something is easy to overlook")}</h3><p>${vis ? esc(o.text) : "Maya’s eye may reveal it."}</p>${found ? '<p class="tiny" style="color:var(--ok)">Discovery recorded.</p>' : `<button class="primary ${why ? "locked" : ""}" id="do" ${why ? 'aria-disabled="true"' : ""}>${esc(o.verb)}${o.cost ? " · 1 hour" : ""}${esc(loot)}</button>${why ? `<p class="tiny" style="color:var(--warn);margin-top:6px">${esc(why)}</p>` : ""}`}</div></div>`, [["Close"]], { wide: true });
+      const o = objs.find((x) => x.id === sceneSel), found = R.searched(S, o), why = found ? "" : R.objectReason(S, o), vis = R.objectVisible(S, o);
+      const hot = objs.map((x, i) => `<button class="hot ${R.searched(S, x) ? "found" : ""} ${x.id === sceneSel ? "sel" : ""} ${!R.objectVisible(S, x) ? "hidden" : ""}" data-obj="${x.id}" style="left:${x.x}%;top:${x.y}%" aria-label="Examine ${esc(R.objectVisible(S, x) ? x.name : "something hidden")}">${R.searched(S, x) ? "✓" : R.objectVisible(S, x) ? i + 1 : "?"}</button>`).join("");
+      const list = objs.map((x) => `<button data-obj="${x.id}" class="${x.id === sceneSel ? "sel" : ""}">${R.searched(S, x) ? "✓ " : "◇ "}${esc(R.objectVisible(S, x) ? x.name : "Something hidden")}</button>`).join("");
+      const loot = Object.keys(o.loot).length ? (R.repeatable(o) && R.isFound(S, o.id) ? " · up to " : " · ") + R.list(o.loot) : "";
+      modal(esc(sc.title), `<p>${esc(sc.intro)}</p><div class="search-grid"><div><div class="scene">${panel(sc.art)}${hot}</div><div class="objs">${list}</div></div><div class="card"><h3>${esc(vis ? o.name : "Something is easy to overlook")}</h3><p>${vis ? esc(o.text) : "Maya’s eye may reveal it."}</p>${found ? `<p class="tiny" style="color:var(--ok)">${R.repeatable(o) ? "Searched today. This spot refreshes at midnight." : "Discovery recorded."}</p>` : `<button class="primary ${why ? "locked" : ""}" id="do" ${why ? 'aria-disabled="true"' : ""}>${esc(o.verb)}${o.cost ? " · 1 hour" : ""} · ${R.searchCost(S, o)} energy${esc(loot)}</button>${why ? `<p class="tiny" style="color:var(--warn);margin-top:6px">${esc(why)}</p>` : ""}`}</div></div>`, [["Close"]], { wide: true });
       $$("[data-obj]", dlg).forEach((b) => (b.onclick = () => { sceneSel = b.dataset.obj; draw(); }));
       const d = $("#do", dlg); if (d) d.onclick = () => { if (why) return toast(why); const c = S.collapses; const msg = R.search(S, o.id); save(); render(); if (S.collapses !== c) return showCollapse(); draw(); toast(msg); };
     };
@@ -241,7 +255,7 @@
   }
   function showEnding() {
     const e = R.ending(S); if (!e) return;
-    modal(e.title, `${panel("frontier-20")}<p style="margin-top:10px;color:var(--ink)">${esc(e.text)}</p><p class="tiny">Free play continues. The valley is yours.</p>`, [["Continue your story", null, "primary"]]);
+    modal(e.title, `${panel("frontier-20")}<p style="margin-top:10px;color:var(--ink)">${esc(e.text)}</p><p class="tiny">Your story continues.</p>`, [["Continue your story", null, "primary"]]);
   }
   function showEncounter(msg) {
     const e = S.encounter; if (!e) return closeModal();
@@ -263,6 +277,40 @@
   }
   function showCollapse() {
     modal("You wake at camp", `${panel("frontier-20")}<p style="margin-top:10px">Everything goes dark. You wake at dawn beside the fire, a blanket over you and Maya at your side. You are weak, but alive. Eat, drink and take it slowly today.</p><p class="tiny">Health ${S.health}. Anything you were carrying stays with you.</p>`, [["Get up", null, "primary"]], { locked: true });
+  }
+
+
+  /* ---------- survivors, strangers, the gate ---------- */
+  function showStranger(msg) {
+    const p = S.stranger; if (!p) return closeModal();
+    const title = p.hostile ? "A hostile stranger" : p.child ? "A lost child" : p.injured ? "A wounded stranger" : "A stranger";
+    const body = `${panel(p.hostile ? "frontier-02" : "story-09")}<p style="margin-top:10px;color:var(--ink)">${esc(R.strangerText(p))}</p>${msg ? `<p class="tiny" style="color:var(--accent)">${esc(msg)}</p>` : ""}<p class="tiny">Beds at camp: ${R.housing(S).beds} for ${R.housing(S).count} survivors.</p>`;
+    const buttons = p.hostile
+      ? [["Flee · 5 energy", () => commit(() => R.strangerFlee(S))], ["Attack", () => commit(() => R.strangerAttack(S)), "primary"]]
+      : [[p.helped ? "Already helped" : p.injured ? "Treat the wound · 1 herb" : "Share a ration · 1 ration", () => { const m = R.strangerOffer(S); save(); render(); showStranger(m); }, "", true],
+         [`Bring them to camp · ${R.ENERGY.travel} energy`, () => commit(() => R.strangerBring(S)), "primary"],
+         ["Leave them", () => commit(() => R.strangerLeave(S))]];
+    modal(title, body, buttons, { locked: true });
+  }
+  const sexLabel = (p) => (p.child ? (p.sex === "F" ? "Girl" : "Boy") : p.sex === "F" ? "Woman" : "Man");
+  function showSurvivors() {
+    const h = R.housing(S), need = S.survivors.length;
+    const rows = S.survivors.map((p, i) => {
+      const housed = i < h.beds;
+      const badges = [p.injured && "injured", p.sick && "sick", !housed && "no bed"].filter(Boolean).map((b) => `<span class="chip no">${b}</span>`).join("") + (housed ? '<span class="chip ok">has a bed</span>' : "");
+      const sel = p.child ? `<span class="tiny muted">Too young for chores. Sometimes finds useful things.</span>` : `<select data-task="${p.id}" aria-label="Task for ${esc(p.name)}">${Object.entries(R.TASKS).map(([k, l]) => `<option value="${k}" ${p.task === k ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+      return `<article class="recipe"><h3>${esc(p.name)} <span class="tiny muted">· ${sexLabel(p)}</span></h3><div class="hpbar" style="margin:0"><i style="width:${p.health}%;background:${p.health < 40 ? "#ff8a78" : "var(--ok)"}"></i></div><div class="chips">${badges}</div>${sel}${p.injured || p.sick ? `<button data-treat="${p.id}" class="${S.inv.herb ? "primary" : ""}" ${S.inv.herb ? "" : 'aria-disabled="true"'}>Treat · 1 herb</button>` : ""}</article>`;
+    }).join("");
+    modal("Survivors in camp", `<p class="tiny">${need} ${need === 1 ? "person" : "people"} · ${h.beds} ${h.beds === 1 ? "bed" : "beds"}${h.unhoused ? ` · <span style="color:var(--warn)">${h.unhoused} without a bed will grow sick and may die</span>` : ""} · each person eats about 1 ration a day (or 2 berries or 1 fish).</p><p class="tiny">Tasks pay out at midnight. Chores need a healthy adult. Winter halves what plants give.</p><div class="recipes">${rows || "<p>No one yet. Search places around the valley to find survivors.</p>"}</div>`, [["Close"]], { wide: true });
+    $$("[data-task]", dlg).forEach((s) => (s.onchange = () => { toast(R.setTask(S, s.dataset.task, s.value)); save(); }));
+    $$("[data-treat]", dlg).forEach((b) => (b.onclick = () => { if (b.getAttribute("aria-disabled")) return toast("You need 1 medicinal herb."); const c = S.collapses; const m = R.treat(S, b.dataset.treat); save(); render(); toast(m); if (S.collapses !== c) return showCollapse(); showSurvivors(); }));
+  }
+  function showGateConfirm() {
+    modal("The rift gate", `${panel("frontier-14")}<p style="margin-top:10px">The stone arch hums. Beyond it, light moves like water over an unfamiliar coast. Stepping to the edge closes Part 1 of your story. You can keep playing and building afterward.</p>`, [["Open the gate", () => { commit(() => R.openGate(S)); showFinale(); }, "primary"], ["Not yet"]]);
+  }
+  function showFinale() {
+    const c = S.flags.committed;
+    modal("Part 1 complete", `${panel("frontier-14")}<p style="margin-top:10px;color:var(--ink)">The gate steadies. Past it lies a shoreline under a different sky: salt wind, unfamiliar stars, and the tracks of something enormous. ${c ? "Maya takes your hand." : "Maya stands beside you."} Behind you, the camp you built holds its fire against the long dark.</p><p>${S.survivors.length} ${S.survivors.length === 1 ? "survivor calls" : "survivors call"} your camp home. ${S.deaths ? S.deaths + " did not make it." : ""}</p><p class="tiny">Part 2, The Far Shore, is not playable yet. Your settlement, survivors and choices are saved and will carry over. Keep building in the meantime.</p>`, [["Keep playing", null, "primary"]]);
   }
 
   /* ---------- menu and cheats ---------- */
@@ -289,4 +337,5 @@
   }
 
   render();
+  if (S && S.prologue >= 4) { if (S.encounter) showEncounter(); else if (S.stranger) showStranger(); }
 })();
