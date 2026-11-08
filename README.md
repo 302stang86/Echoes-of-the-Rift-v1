@@ -61,3 +61,6 @@ Autosave key `echoes-rift-v2`; manual save is separate. v1 saves are not compati
 - Heavy winter coats are no longer a recipe. Coats are gear: make a Light coat, upgrade it to a Heavy coat, and equip one on you and one on Maya. The Glacier and ravine requirements use these.
 - Hunt game (forest, grove, river) needs a spear or axe equipped and brings meat, hides and sometimes claws.
 - All gear has drawn vector icons (assets/gear-icons.js). A reference sheet is in assets/art/gear-sheet.png.
+
+## Graphics release 2
+All 24 gear tiers now use textured prehistoric survival artwork. See EXPANSION-PROPOSAL.md for the proposed second map (not implemented). Release numbers live in VERSION; run `node scripts/bump-version.cjs` once per future release to increment by one. Save schema versions are independent.
