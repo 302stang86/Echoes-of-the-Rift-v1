@@ -1,0 +1,402 @@
+{
+  "story-01": {
+    "title": "Rushing to Work",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      2,
+      0,
+      338,
+      188
+    ]
+  },
+  "story-02": {
+    "title": "Earth Tearing Apart",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      347,
+      0,
+      338,
+      188
+    ]
+  },
+  "story-03": {
+    "title": "Freefall",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      693,
+      0,
+      336,
+      188
+    ]
+  },
+  "story-04": {
+    "title": "Impact",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      1036,
+      0,
+      338,
+      188
+    ]
+  },
+  "story-05": {
+    "title": "Struggling Free",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      2,
+      194,
+      338,
+      185
+    ]
+  },
+  "story-06": {
+    "title": "Hellscape View",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      347,
+      194,
+      338,
+      185
+    ]
+  },
+  "story-07": {
+    "title": "Hearing Maya",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      693,
+      194,
+      336,
+      185
+    ]
+  },
+  "story-08": {
+    "title": "Clearing the Rubble",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      1036,
+      194,
+      338,
+      185
+    ]
+  },
+  "story-09": {
+    "title": "Rescued and Together",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      2,
+      386,
+      338,
+      122
+    ]
+  },
+  "story-10": {
+    "title": "The Electric Glow",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      347,
+      386,
+      338,
+      122
+    ]
+  },
+  "story-11": {
+    "title": "Clean Zone",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      693,
+      386,
+      336,
+      122
+    ]
+  },
+  "story-12": {
+    "title": "Scavenging Supplies",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      1036,
+      386,
+      338,
+      122
+    ]
+  },
+  "story-13": {
+    "title": "Ground Tremors Again",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      2,
+      515,
+      338,
+      123
+    ]
+  },
+  "story-14": {
+    "title": "The Light Expands",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      347,
+      515,
+      338,
+      123
+    ]
+  },
+  "story-15": {
+    "title": "Seeing the Past",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      693,
+      515,
+      336,
+      123
+    ]
+  },
+  "story-16": {
+    "title": "The Final Run",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      1036,
+      515,
+      338,
+      123
+    ]
+  },
+  "story-17": {
+    "title": "The Flash",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      2,
+      645,
+      338,
+      123
+    ]
+  },
+  "story-18": {
+    "title": "Arrival",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      347,
+      645,
+      338,
+      123
+    ]
+  },
+  "story-19": {
+    "title": "Exploring the Wild",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      693,
+      645,
+      336,
+      123
+    ]
+  },
+  "story-20": {
+    "title": "Establishing Camp",
+    "sheet": "story-sheet.jpg",
+    "box": [
+      1036,
+      645,
+      338,
+      123
+    ]
+  },
+  "frontier-01": {
+    "title": "The New Frontier",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      2,
+      0,
+      338,
+      188
+    ]
+  },
+  "frontier-02": {
+    "title": "Dire Wolf Stalk",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      347,
+      0,
+      338,
+      188
+    ]
+  },
+  "frontier-03": {
+    "title": "Scavenged Tools",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      693,
+      0,
+      336,
+      188
+    ]
+  },
+  "frontier-04": {
+    "title": "Cave Bear Cave",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      1036,
+      0,
+      338,
+      188
+    ]
+  },
+  "frontier-05": {
+    "title": "Collecting Firewood",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      2,
+      194,
+      338,
+      185
+    ]
+  },
+  "frontier-06": {
+    "title": "River Fishing Area",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      347,
+      194,
+      338,
+      185
+    ]
+  },
+  "frontier-07": {
+    "title": "Strange Sound",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      693,
+      194,
+      336,
+      185
+    ]
+  },
+  "frontier-08": {
+    "title": "Building the Shelter",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      1036,
+      194,
+      338,
+      185
+    ]
+  },
+  "frontier-09": {
+    "title": "Woolly Rhino Sighting",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      2,
+      386,
+      338,
+      122
+    ]
+  },
+  "frontier-10": {
+    "title": "Megaloceros Antlers",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      347,
+      386,
+      338,
+      122
+    ]
+  },
+  "frontier-11": {
+    "title": "Saber-tooth Ambush",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      693,
+      386,
+      336,
+      122
+    ]
+  },
+  "frontier-12": {
+    "title": "Distant Thunder Bird",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      1036,
+      386,
+      338,
+      122
+    ]
+  },
+  "frontier-13": {
+    "title": "Finding a Scavenged Car Battery",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      2,
+      515,
+      338,
+      123
+    ]
+  },
+  "frontier-14": {
+    "title": "Anomaly Road Sign",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      347,
+      515,
+      338,
+      123
+    ]
+  },
+  "frontier-15": {
+    "title": "Hunting the Chase",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      693,
+      515,
+      336,
+      123
+    ]
+  },
+  "frontier-16": {
+    "title": "Scavenged Items Cache",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      1036,
+      515,
+      338,
+      123
+    ]
+  },
+  "frontier-17": {
+    "title": "River Predators",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      2,
+      645,
+      338,
+      123
+    ]
+  },
+  "frontier-18": {
+    "title": "Gathering Berries",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      347,
+      645,
+      338,
+      123
+    ]
+  },
+  "frontier-19": {
+    "title": "Camp Fortification",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      693,
+      645,
+      336,
+      123
+    ]
+  },
+  "frontier-20": {
+    "title": "Home Campfire",
+    "sheet": "frontier-sheet.jpg",
+    "box": [
+      1036,
+      645,
+      338,
+      123
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+Blue rift background, generated using the built-in image generator.
+Reference: supplied blue parchment / shattered-stone / Mustang / rift illustration.
+Final direction: a wide hand-painted etched mosaic in midnight navy, cobalt, slate and cyan; battered burgundy Foxbody Mustang, glowing temporal ring and prehistoric fern carvings on the right; quiet dark left side for HTML title and menu; a thin aged parchment border; no embedded text or interface.
+Asset: blue-rift-background.png

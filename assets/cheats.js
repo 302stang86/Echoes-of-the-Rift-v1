@@ -1,0 +1,14 @@
+(function(root){'use strict';
+const ACCESS='echoes-rift-cheat-access';let accessMemory=false;
+const options=[{id:'god',name:'Invincibility',desc:'Keep health at 100. Enabling it also revives a fallen hero; enemies and quests remain active.'},{id:'needs',name:'Unlimited survival',desc:'Keep hunger, hydration, and warmth at 100 while time continues to pass.'},{id:'freeCraft',name:'Free crafting',desc:'Craft without spending materials. Quest and blueprint requirements still apply, and crafting still takes an hour.'},{id:'safeTravel',name:'No random ambushes',desc:'Disable random wildlife encounters while traveling. Quest predators and transmitter defense waves still appear.'},{id:'openMap',name:'Unlock destinations',desc:'Travel to any map destination. Story quests and puzzles keep their own requirements.'},{id:'fastTravel',name:'Fast travel everywhere',desc:'All travel takes one game hour, including unexplored destinations.'}];
+function fresh(){return {version:1,everUsed:false,god:false,needs:false,freeCraft:false,safeTravel:false,openMap:false,fastTravel:false};}
+function state(s){return s.cheats||fresh();}
+function unlocked(){try{return accessMemory||sessionStorage.getItem(ACCESS)==='unlocked'}catch{return accessMemory}}
+function unlock(code){if(code!=='Chaosenvy')return false;accessMemory=true;try{sessionStorage.setItem(ACCESS,'unlocked')}catch{}return true;}
+function lock(){accessMemory=false;try{sessionStorage.removeItem(ACCESS)}catch{}}
+function available(){return unlocked();}
+function set(s,key,on){if(!available())return 'Enter the access code first.';if(!options.some(o=>o.id===key)||typeof on!=='boolean')return 'Unknown cheat option.';s.cheats=s.cheats||fresh();s.cheats[key]=on;if(on){s.cheats.everUsed=true;if(key==='god'){s.health=100;s.dead=false;}if(key==='needs'){s.hunger=100;s.thirst=100;s.warmth=100;}}return options.find(o=>o.id===key).name+(on?' enabled.':' disabled.');}
+function apply(s,id){if(!available())return 'Enter the access code first.';if(!['meters','supplies','relationship'].includes(id))return 'Unknown cheat action.';s.cheats=s.cheats||fresh();s.cheats.everUsed=true;if(id==='meters'){for(let k of ['health','hunger','thirst','warmth'])s[k]=100;s.dead=false;return 'Health, food, hydration, and warmth restored.';}if(id==='supplies'){for(let k of Object.keys(root.Rift.names))root.Rift.add(s,k,50);return 'Added 50 of every resource, ration, water bottle, and trap.';}let b=root.Rift.Bond.ensure(s);b.trust=100;b.affection=100;return 'Trust and affection set to 100. Story scenes and relationship choices remain yours.';}
+function disable(s){if(!available())return 'Enter the access code first.';if(s.cheats)for(let o of options)s.cheats[o.id]=false;return 'All ongoing cheats disabled. Prior rewards and the save marker remain.';}
+root.RiftCheats={options,fresh,state,unlocked,unlock,lock,set,apply,disable};
+})(typeof window!=='undefined'?window:globalThis);

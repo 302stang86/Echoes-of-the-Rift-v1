@@ -1,0 +1,200 @@
+{
+  "image": "valley-map.jpg",
+  "width": 1376,
+  "height": 768,
+  "locations": [
+    {
+      "id": "camp",
+      "name": "River Camp",
+      "x": 430,
+      "y": 310,
+      "label": "CAMP",
+      "kind": "Home",
+      "desc": "Your riverbank refuge. Build, rest, refill bottles, and manage Maya\u2019s assignments.",
+      "art": "frontier-20",
+      "resources": []
+    },
+    {
+      "id": "forest",
+      "name": "Old-growth Forest",
+      "x": 130,
+      "y": 350,
+      "label": "FOREST",
+      "kind": "Resources",
+      "desc": "Ancient conifers shelter fallen timber and broad fern leaves.",
+      "art": "frontier-05",
+      "resources": [
+        "log",
+        "leaf"
+      ]
+    },
+    {
+      "id": "grove",
+      "name": "Birch Grove",
+      "x": 580,
+      "y": 645,
+      "label": "GROVE",
+      "kind": "Resources",
+      "desc": "A sheltered grove with flexible saplings, berries, and medicinal herbs.",
+      "art": "frontier-18",
+      "resources": [
+        "sapling",
+        "herb",
+        "berry"
+      ]
+    },
+    {
+      "id": "river",
+      "name": "River Bend",
+      "x": 265,
+      "y": 452,
+      "label": "RIVER",
+      "kind": "Wildlife",
+      "desc": "Flint and clay line the water. A wounded dire wolf stalks the nearby trail.",
+      "art": "frontier-02",
+      "resources": [
+        "stone",
+        "clay"
+      ]
+    },
+    {
+      "id": "ridge",
+      "name": "Broken Ridge",
+      "x": 846,
+      "y": 176,
+      "label": "RIDGE",
+      "kind": "Salvage",
+      "desc": "Modern wreckage is lodged among the fractured rocks. Bring Maya to salvage the Mustang alternator.",
+      "art": "frontier-16",
+      "resources": [
+        "scrap",
+        "wire",
+        "alternator"
+      ],
+      "gate": 2
+    },
+    {
+      "id": "rift",
+      "name": "Glowing Purple Rift",
+      "x": 912,
+      "y": 587,
+      "label": "RIFT",
+      "kind": "Anomaly",
+      "desc": "Temporary tears drop batteries, copper wire, and metal into the clearing. Crystals glow in the soil.",
+      "art": "frontier-14",
+      "resources": [
+        "energy",
+        "scrap",
+        "wire",
+        "battery"
+      ]
+    },
+    {
+      "id": "ravine",
+      "name": "Foggy Ravine",
+      "x": 645,
+      "y": 259,
+      "label": "RAVINE",
+      "kind": "Quest",
+      "desc": "Follow the cairns below Broken Ridge. Bring Maya, winter coats, and six rations to trace the path to the monolith.",
+      "art": "frontier-07",
+      "resources": [
+        "stone",
+        "herb"
+      ],
+      "gate": 4
+    },
+    {
+      "id": "glacier",
+      "name": "Glacier Peaks",
+      "x": 315,
+      "y": 89,
+      "label": "GLACIER",
+      "kind": "Frozen highlands",
+      "desc": "Rift crystals lie among ice-scoured rocks. Winter coats are required to reach the peaks.",
+      "art": "frontier-01",
+      "resources": [
+        "stone",
+        "energy"
+      ],
+      "requires": "coat"
+    },
+    {
+      "id": "den",
+      "name": "Cave Bear Den",
+      "x": 1240,
+      "y": 225,
+      "label": "DEN",
+      "kind": "Danger",
+      "desc": "A cave bear shelters under the eastern canopy. Keep your distance or prepare to confront it.",
+      "art": "frontier-04",
+      "resources": [
+        "stone",
+        "herb"
+      ],
+      "gate": 3
+    },
+    {
+      "id": "meadow",
+      "name": "Woolly Rhino Meadow",
+      "x": 962,
+      "y": 311,
+      "label": "MEADOW",
+      "kind": "Wildlife",
+      "desc": "Rhinos graze beyond the river. Observe from the edge while foraging for berries and herbs.",
+      "art": "frontier-09",
+      "resources": [
+        "leaf",
+        "berry",
+        "herb"
+      ],
+      "gate": 2
+    },
+    {
+      "id": "totem",
+      "name": "Wolf Totem",
+      "x": 150,
+      "y": 635,
+      "label": "TOTEM",
+      "kind": "Lore",
+      "desc": "Weathered wolf figures and carved pillars watch the southern forest. Their markings echo the rift.",
+      "art": "frontier-02",
+      "resources": [
+        "stone",
+        "energy"
+      ],
+      "gate": 3
+    },
+    {
+      "id": "monolith",
+      "name": "Rift Monolith",
+      "x": 1200,
+      "y": 432,
+      "label": "MONOLITH",
+      "kind": "Rift technology",
+      "desc": "The permanent stone anchor resonates with the ravine. Solve Signals in the Mist to unlock access.",
+      "art": "frontier-07",
+      "resources": [
+        "energy",
+        "stone"
+      ],
+      "requires": "monolith"
+    },
+    {
+      "id": "coast",
+      "name": "Prehistoric Sea",
+      "x": 1265,
+      "y": 631,
+      "label": "COAST",
+      "kind": "Coast",
+      "desc": "Explore the shore beside the river delta. Storms wash clay, stone, and stray copper onto the beach.",
+      "art": "frontier-17",
+      "resources": [
+        "clay",
+        "stone",
+        "wire"
+      ],
+      "gate": 4
+    }
+  ]
+}
