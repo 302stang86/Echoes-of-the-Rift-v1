@@ -17,6 +17,8 @@
     const clip = "clip" + ++serial;
     return `<figure class="art-panel ${cls}"><svg viewBox="${a.box.join(" ")}" role="img" aria-label="${esc(a.title)}"><title>${esc(a.title)}</title><defs><clipPath id="${clip}"><rect x="${a.box[0]}" y="${a.box[1]}" width="${a.box[2]}" height="${a.box[3]}"/></clipPath></defs><image clip-path="url(#${clip})" href="assets/art/${a.sheet}" width="${a.width || 1376}" height="${a.height || 768}"/></svg></figure>`;
   }
+  const chipHtml = (k, n) => `<span class="chip ${(S.inv[k] || 0) >= n ? "ok" : "no"}">${n} ${R.names[k]} (${S.inv[k] || 0})</span>`;
+  const costHtml = (c) => Object.entries(c).map(([k, n]) => chipHtml(k, n)).join("");
   function toast(t, ms = 3600) {
     if (!t) return;
     toastEl.textContent = t; toastEl.hidden = false;
@@ -48,6 +50,8 @@
     if (S.collapses !== c) showCollapse();
     else if (S.encounter) showEncounter(msg);
     else if (S.stranger) showStranger(msg);
+    else if (S.drop) showDrop(msg);
+    else if (S.notice) showNotice();
     else if (S.pending) { const id = S.pending; S.pending = null; save(); showBeat(id); }
     else if (msg) toast(msg);
     if (S.quest !== q && S.quest === 6) toast("The signal is live. But the story is not over. Winter is coming.", 6000);
@@ -93,7 +97,7 @@
   function intro() {
     if (S.flags.intro) return;
     S.flags.intro = true; save();
-    modal("How this works", `<p>Three things are always on screen.</p><div class="lines"><p><b>Next step</b>The banner at the top tells you what to do now, and the glowing pin on the map shows where.</p><p><b>Map</b>Pick a place, then Travel. Travel takes 2 hours and some energy.</p><p><b>Here</b>Everything you can do where you are standing, in one list.</p></div><p class="tiny">Every task spends energy. When you run low, head back to camp and rest or sleep. Gathering spots give 3 harvests a day and refresh at midnight. Seasons change every 20 days, and winter is hard. You may meet other survivors while searching. If you collapse, Maya will find you.</p>`, [["Start at camp", null, "primary"]]);
+    modal("How this works", `<p>Three things are always on screen.</p><div class="lines"><p><b>Next step</b>The banner at the top tells you what to do now, and the glowing pin on the map shows where.</p><p><b>Map</b>Pick a place, then Travel. Travel takes 2 hours and some energy.</p><p><b>Here</b>Everything you can do where you are standing, in one list.</p></div><p class="tiny">Be back at camp by 10 PM. From 10 PM to midnight you can only check on survivors, craft, talk or rest, and you fall asleep at midnight until morning. Rest by the fire to pass time. Every task spends energy. When you run low, head back to camp and rest or sleep. Gathering spots give 3 harvests a day and refresh at midnight. Seasons change every 20 days, and winter is hard. You may meet other survivors while searching. If you collapse, Maya will find you.</p>`, [["Start at camp", null, "primary"]]);
   }
 
   /* ---------- the hub ---------- */
@@ -112,7 +116,7 @@
     }).join("");
     const travelBtn = `<button class="primary ${lock ? "locked" : ""}" id="go" ${lock ? 'aria-disabled="true"' : ""}>Travel to ${esc(sel.name)} · ${R.travelHours(S, sel.id)} hours · ${R.ENERGY.travel} energy</button>`;
     app.innerHTML = `
-    <header class="top"><span class="brand">ECHOES OF THE RIFT</span><span class="clock">${night ? "☾" : "☀"} ${R.seasonOf(S.day)} · Day ${S.day} · ${hhmm(S.hour)}</span>
+    <header class="top"><span class="brand">ECHOES OF THE RIFT</span><span class="clock">${night ? "☾" : "☀"} ${R.seasonOf(S.day)} · Day ${S.day} · ${hhmm(S.hour)}${S.loc !== "camp" && !S.cheats.noCurfew ? ` <em class="dusk">· back at camp by ${hhmm(R.CURFEW)}</em>` : S.loc === "camp" && S.hour >= R.CURFEW ? ` <em class="dusk">· sleep at ${hhmm(0)}</em>` : ""}</span>
       <div class="meters">${meter("Health", S.health)}${meter("Food", S.food)}${meter("Water", S.water)}${meter("Warmth", S.warmth)}${meter("Energy", S.energy)}</div>
       <div class="row"><button id="eat" aria-label="Eat">Eat</button><button id="drink" aria-label="Drink">Drink</button><button id="pack">Pack</button><button id="journal">Journal</button><button id="menu">Menu${S.cheats.everUsed ? " · cheats used" : ""}</button></div></header>
     <main class="hub">
@@ -138,6 +142,7 @@
     if (a.type === "ravine") return showRavine();
     if (a.type === "wire") return showWiring();
     if (a.type === "survivors") return showSurvivors();
+    if (a.type === "gear") return showGear("hero");
     if (a.type === "gate") return showGateConfirm();
     if (a.type === "talk") return commit(() => R.talk(S));
     commit(() => R.act(S, a.type, a.id));
@@ -145,6 +150,7 @@
 
   /* ---------- panels ---------- */
   function showBuild() {
+    if (S.notice) return showNotice();
     const chip = (k, n) => `<span class="chip ${(S.inv[k] || 0) >= n ? "ok" : "no"}">${n} ${R.names[k]} (${S.inv[k] || 0})</span>`;
     const rows = Object.entries(R.recipes).map(([id, r]) => {
       const lock = R.recipeLock(S, id), can = !lock && (S.cheats.freeCraft || R.can(S, r.cost));
@@ -155,7 +161,8 @@
     const costChips = (c) => Object.entries(c).map(([k, n]) => chip(k, n)).join("");
     const okCost = (c) => S.cheats.freeCraft || R.can(S, c);
     const leantos = S.flags.shelter ? `<details open><summary>Lean-tos · ${S.shelters.length} built</summary><p class="tiny">You and Maya share the main lean-to. Each rescued survivor needs a bed, or they will fall sick. Another lean-to gives 1 bed. A lean-to at level 3 gives 2 beds.</p><div class="recipes">${S.shelters.map((sh, i) => { const up = R.SHELTER_UPGRADES[sh.level]; return `<article class="recipe"><h3>${i === 0 ? "Main lean-to" : "Lean-to " + (i + 1)}</h3><p>Level ${sh.level} of 3 · ${i === 0 ? "you and Maya" : sh.level >= 3 ? "2 survivors" : "1 survivor"}${i === 0 && sh.level >= 3 ? " + 2 survivors" : ""}</p>${up ? `<p>Next: ${up.desc}</p><div class="chips">${costChips(up.cost)}</div><button data-upg="${i}" class="${okCost(up.cost) ? "primary" : ""}" ${okCost(up.cost) ? "" : 'aria-disabled="true"'}>${okCost(up.cost) ? "Upgrade to level " + (sh.level + 1) : "Not enough materials"}</button>` : "<p>Fully upgraded.</p>"}</article>`; }).join("")}${S.shelters.length < R.MAX_LEANTOS ? `<article class="recipe"><h3>Another lean-to</h3><p>Room for 1 more survivor.</p><div class="chips">${costChips(R.EXTRA_LEANTO)}</div><button data-newleanto class="${okCost(R.EXTRA_LEANTO) ? "primary" : ""}" ${okCost(R.EXTRA_LEANTO) ? "" : 'aria-disabled="true"'}>${okCost(R.EXTRA_LEANTO) ? "Build" : "Not enough materials"}</button></article>` : ""}</div></details>` : "";
-    modal("Build and craft", `<p class="tiny">Each build takes 1 hour and ${R.ENERGY.craft} energy. Green means you have enough. Ready items come first.</p>${leantos}<div class="recipes">${open || "<p>Nothing else to build right now.</p>"}</div>${later.length ? `<details><summary>Not available yet · ${later.length}</summary><div class="recipes">${later.map((r) => r.html).join("")}</div></details>` : ""}`, [["Close"]], { wide: true });
+    const workshop = S.flags.shelter ? `<details ${S.inv.leather || S.inv.hide ? "open" : ""}><summary>Gear workshop · clothing, tools and weapons</summary><p class="tiny">Crafted gear goes into your gear pack. Equip it from Gear and equipment, where you can also upgrade it. Raw hides come from animals; tan them into leather at a tanning rack.</p><div class="recipes">${Object.keys(R.FAM).map((fam) => { const i = R.GEAR[fam + "1"], lock = R.gearLock(S, i.id), ok = !lock && (S.cheats.freeCraft || R.can(S, i.cost)); return `<article class="recipe"><h3><span class="gl">${GearIcons.svg(i, 34)}</span> ${i.name}</h3><p>${R.itemDesc(i)} · ${R.FAM[fam].names.length} tiers</p><div class="chips">${costHtml(i.cost)}</div><button data-gear="${fam}" class="${ok ? "primary" : ""}" ${ok ? "" : 'aria-disabled="true"'}>${lock || (ok ? "Craft" : "Not enough materials")}</button></article>`; }).join("")}</div></details>` : "";
+    modal("Build and craft", `<p class="tiny">Each build takes 1 hour and ${R.ENERGY.craft} energy. Green means you have enough. Ready items come first.</p>${leantos}${workshop}<div class="recipes">${open || "<p>Nothing else to build right now.</p>"}</div>${later.length ? `<details><summary>Not available yet · ${later.length}</summary><div class="recipes">${later.map((r) => r.html).join("")}</div></details>` : ""}`, [["Close"]], { wide: true });
     $$("[data-upg]", dlg).forEach((b) => (b.onclick = () => {
       if (b.getAttribute("aria-disabled")) return toast("Not enough materials.");
       const c = S.collapses, q = S.quest; const msg = R.upgradeShelter(S, +b.dataset.upg); save(); render(); toast(msg);
@@ -163,6 +170,11 @@
     }));
     const nl = $("[data-newleanto]", dlg);
     if (nl) nl.onclick = () => { if (nl.getAttribute("aria-disabled")) return toast("Not enough materials."); const c = S.collapses; const msg = R.buildShelter(S); save(); render(); toast(msg); if (S.collapses !== c) return showCollapse(); showBuild(); };
+    $$("[data-gear]", dlg).forEach((b) => (b.onclick = () => {
+      if (b.getAttribute("aria-disabled")) return toast(b.textContent);
+      const c = S.collapses; const msg = R.craftGear(S, b.dataset.gear); save(); render(); toast(msg);
+      if (S.collapses !== c) return showCollapse(); showBuild();
+    }));
     $$("[data-build]", dlg).forEach((b) => (b.onclick = () => {
       if (b.getAttribute("aria-disabled")) return toast(b.textContent);
       const id = b.dataset.build, q = S.quest, c = S.collapses; const msg = R.craft(S, id); save(); render();
@@ -272,6 +284,7 @@
     const q = S.quest, c = S.collapses, msg = R.fight(S, a); save(); render();
     if (S.collapses !== c) return showCollapse();
     if (S.encounter) return showEncounter(msg);
+    if (S.drop) return showDrop(msg);
     closeModal(); toast(msg);
     if (S.quest !== q) toast("Quest complete: " + R.quests[q].title + ". Next: " + R.objective(S).title + ".", 5000);
   }
@@ -293,18 +306,77 @@
     modal(title, body, buttons, { locked: true });
   }
   const sexLabel = (p) => (p.child ? (p.sex === "F" ? "Girl" : "Boy") : p.sex === "F" ? "Woman" : "Man");
+  function gearLine(g) {
+    const bits = [];
+    const w = R.warmOf(g), tl = g.tool && R.GEAR[g.tool], wp = g.weapon && R.GEAR[g.weapon];
+    if (w) bits.push("warmth +" + w);
+    if (tl) bits.push(tl.name);
+    if (wp) bits.push(wp.name);
+    return bits.length ? bits.join(" · ") : "No gear equipped";
+  }
   function showSurvivors() {
+    if (S.notice) return showNotice();
     const h = R.housing(S), need = S.survivors.length;
+    const herbs = S.inv.herb || 0;
+    const mine = (who, label, sub) => `<article class="recipe mine"><h3>${esc(label)} <span class="tiny muted">· ${sub}</span></h3><p class="tiny">${esc(gearLine(R.gearOf(S, who)))}</p><button data-gear-of="${who}">Gear</button></article>`;
     const rows = S.survivors.map((p, i) => {
-      const housed = i < h.beds;
+      const housed = i < h.beds, hurt = p.injured || p.health < 50, cost = (hurt ? 1 : 0) + (p.sick ? 2 : 0);
       const badges = [p.injured && "injured", p.sick && "sick", !housed && "no bed"].filter(Boolean).map((b) => `<span class="chip no">${b}</span>`).join("") + (housed ? '<span class="chip ok">has a bed</span>' : "");
       const sel = p.child ? `<span class="tiny muted">Too young for chores. Sometimes finds useful things.</span>` : `<select data-task="${p.id}" aria-label="Task for ${esc(p.name)}">${Object.entries(R.TASKS).map(([k, l]) => `<option value="${k}" ${p.task === k ? "selected" : ""}>${l}</option>`).join("")}</select>`;
-      return `<article class="recipe"><h3>${esc(p.name)} <span class="tiny muted">· ${sexLabel(p)}</span></h3><div class="hpbar" style="margin:0"><i style="width:${p.health}%;background:${p.health < 40 ? "#ff8a78" : "var(--ok)"}"></i></div><div class="chips">${badges}</div>${sel}${p.injured || p.sick ? `<button data-treat="${p.id}" class="${S.inv.herb ? "primary" : ""}" ${S.inv.herb ? "" : 'aria-disabled="true"'}>Treat · 1 herb</button>` : ""}</article>`;
+      const ill = p.sick ? `<div class="illbar" title="Sickness"><i style="width:${Math.round(p.ill || 0)}%"></i></div><div class="tiny" style="color:#ff8a78;margin:-6px 0 8px">Sick · ${Math.round(p.ill || 0)}%${(p.ill || 0) >= 100 ? " · health is dropping" : " · health drops once this is full"}</div>` : "";
+      return `<article class="recipe"><h3>${esc(p.name)} <span class="tiny muted">· ${sexLabel(p)} · health ${Math.round(p.health)}</span></h3><div class="hpbar" style="margin:0 0 ${p.sick ? 3 : 10}px"><i style="width:${p.health}%;background:${p.health < 50 ? "#ff8a78" : "var(--ok)"}"></i></div>${ill}<div class="chips">${badges}</div><p class="tiny">${esc(gearLine(p.gear || {}))}</p>${sel}<div class="row2"><button data-gear-of="${p.id}">Gear</button>${cost ? `<button data-treat="${p.id}" class="${herbs >= cost ? "primary" : ""}" ${herbs >= cost ? "" : 'aria-disabled="true"'}>Treat · ${cost} ${cost === 1 ? "herb" : "herbs"}</button>` : ""}</div></article>`;
     }).join("");
-    modal("Survivors in camp", `<p class="tiny">${need} ${need === 1 ? "person" : "people"} · ${h.beds} ${h.beds === 1 ? "bed" : "beds"}${h.unhoused ? ` · <span style="color:var(--warn)">${h.unhoused} without a bed will grow sick and may die</span>` : ""} · each person eats about 1 ration a day (or 2 berries or 1 fish).</p><p class="tiny">Tasks pay out at midnight. Chores need a healthy adult. Winter halves what plants give.</p><div class="recipes">${rows || "<p>No one yet. Survivors are found by searching places (not gathering), once you have finished Fresh Catch. Roughly one search in seven turns someone up, and one is guaranteed within eight searches.</p>"}</div>`, [["Close"]], { wide: true });
-    $$("[data-task]", dlg).forEach((s) => (s.onchange = () => { toast(R.setTask(S, s.dataset.task, s.value)); save(); }));
-    $$("[data-treat]", dlg).forEach((b) => (b.onclick = () => { if (b.getAttribute("aria-disabled")) return toast("You need 1 medicinal herb."); const c = S.collapses; const m = R.treat(S, b.dataset.treat); save(); render(); toast(m); if (S.collapses !== c) return showCollapse(); showSurvivors(); }));
+    modal("Camp and gear", `<p class="tiny">${need} ${need === 1 ? "survivor" : "survivors"} · ${h.beds} ${h.beds === 1 ? "bed" : "beds"}${h.unhoused ? ` · <span style="color:var(--warn)">${h.unhoused} without a bed will grow sick and may die</span>` : ""} · each person eats about 1 ration a day (or 2 berries or 1 fish).</p><p class="tiny">Tasks pay out at midnight. Chores can injure or sicken people; warm clothes and weapons lower the risk. Healers use 1 herb for injuries or health under 50%, and 2 herbs for sickness. Winter halves what plants give.</p><div class="recipes">${mine("hero", S.name, "you")}${S.flags.fishing || S.quest >= 1 ? mine("maya", "Maya", "companion") : ""}${rows}</div>${need ? "" : "<p class=\"tiny\">No survivors yet. They are found by searching places (not gathering), once you have finished Fresh Catch. Roughly one search in seven turns someone up, and one is guaranteed within eight searches.</p>"}`, [["Close"]], { wide: true });
+    $$("[data-task]", dlg).forEach((s) => (s.onchange = () => { const m = R.setTask(S, s.dataset.task, s.value); toast(m); save(); showSurvivors(); }));
+    $$("[data-gear-of]", dlg).forEach((b) => (b.onclick = () => showGear(b.dataset.gearOf)));
+    $$("[data-treat]", dlg).forEach((b) => (b.onclick = () => { if (b.getAttribute("aria-disabled")) return toast("You do not have enough herbs."); const c = S.collapses; const m = R.treat(S, b.dataset.treat); save(); render(); toast(m); if (S.collapses !== c) return showCollapse(); showSurvivors(); }));
   }
+
+  /* ---------- gear window ---------- */
+  let gearSel = null;
+  function showGear(who, msg) {
+    if (S.notice) return showNotice();
+    const people = [["hero", S.name], ["maya", "Maya"], ...S.survivors.map((p) => [p.id, p.name])];
+    if (!people.some((x) => x[0] === who)) who = "hero";
+    const g = R.gearOf(S, who), who_ = people.find((x) => x[0] === who)[1];
+    const slotCells = Object.entries(R.SLOTS).map(([slot, label]) => {
+      const it = g[slot] && R.GEAR[g[slot]], on = gearSel && gearSel.kind === "slot" && gearSel.slot === slot;
+      return `<button class="slot ${it ? "t" + it.tier : ""} ${on ? "on" : ""}" data-slot="${slot}" aria-label="${label}${it ? ": " + it.name : ": empty"}"><span class="gl">${it ? GearIcons.svg(it, 46) : ""}</span>${it ? `<span class="tier">${"I".repeat(it.tier)}</span>` : ""}<small>${label}</small></button>`;
+    }).join("");
+    const bag = Object.entries(S.gearBag).filter(([, n]) => n > 0);
+    const bagCells = bag.map(([id, n]) => { const it = R.GEAR[id], on = gearSel && gearSel.kind === "bag" && gearSel.id === id; return `<button class="item t${it.tier} ${on ? "on" : ""}" data-item="${id}" title="${esc(it.name)}"><span class="gl">${GearIcons.svg(it, 46)}</span><span class="tier">${"I".repeat(it.tier)}</span>${n > 1 ? `<span class="count">×${n}</span>` : ""}<small>${esc(it.name)}</small></button>`; }).join("");
+    let detail = `<p class="tiny">Select an item in the pack to equip it on ${esc(who_)}, or select something worn to remove or upgrade it.</p>`;
+    let cur = null, ref = null, buttons = "";
+    if (gearSel && gearSel.kind === "bag" && S.gearBag[gearSel.id]) { cur = R.GEAR[gearSel.id]; ref = "bag:" + cur.id; buttons = `<button class="primary" data-equip="${cur.id}">Equip on ${esc(who_)}</button>`; }
+    else if (gearSel && gearSel.kind === "slot" && g[gearSel.slot]) { cur = R.GEAR[g[gearSel.slot]]; ref = who + ":" + gearSel.slot; buttons = `<button data-remove="${gearSel.slot}">Remove</button>`; }
+    if (cur) {
+      const nxt = R.GEAR[cur.fam + (cur.tier + 1)], lock = nxt && R.gearLock(S, nxt.id), ok = nxt && !lock && (S.cheats.freeCraft || R.can(S, nxt.cost));
+      detail = `<h3><span class="gl">${GearIcons.svg(cur, 34)}</span> ${esc(cur.name)} <span class="tiny muted">· tier ${cur.tier} of ${cur.max} · ${R.SLOTS[cur.slot]}</span></h3><p>${esc(R.itemDesc(cur))}</p><div class="row2">${buttons}</div>${nxt ? `<p class="tiny" style="margin-top:8px">Upgrade to ${esc(nxt.name)} (${esc(R.itemDesc(nxt))}):</p><div class="chips">${costHtml(nxt.cost)}</div><button data-upgrade="${ref}" class="${ok ? "primary" : ""}" ${ok ? "" : 'aria-disabled="true"'}>${lock || (ok ? "Upgrade · " + R.ENERGY.craft + " energy" : "Not enough materials")}</button>` : '<p class="tiny">Fully upgraded.</p>'}`;
+    }
+    const totals = `Warmth +${R.warmOf(g)} · armor ${R.armorOf(g)} · weapon +${R.weaponDmg(g)}`;
+    modal("Gear · " + esc(who_), `<div class="gear-people">${people.map(([id, n]) => `<button class="${id === who ? "primary" : ""}" data-who="${id}">${esc(n)}</button>`).join("")}</div>${msg ? `<p class="tiny" style="color:var(--accent)">${esc(msg)}</p>` : ""}<div class="gear-grid"><div><div class="slots">${slotCells}</div><p class="tiny" style="margin-top:8px">${totals}</p></div><div><div class="eyebrow">Gear pack</div><div class="bag">${bagCells || '<p class="tiny">Empty. Craft clothing, tools and weapons in Build and craft.</p>'}</div></div></div><div class="card gear-detail">${detail}</div>`, [["Back to camp", showSurvivors], ["Close"]], { wide: true });
+    const again = (m) => { save(); render(); showGear(who, m); };
+    $$("[data-who]", dlg).forEach((b) => (b.onclick = () => { gearSel = null; showGear(b.dataset.who); }));
+    $$("[data-slot]", dlg).forEach((b) => (b.onclick = () => { gearSel = { kind: "slot", slot: b.dataset.slot }; showGear(who); }));
+    $$("[data-item]", dlg).forEach((b) => (b.onclick = () => { gearSel = { kind: "bag", id: b.dataset.item }; showGear(who); }));
+    $$("[data-equip]", dlg).forEach((b) => (b.onclick = () => { const m = R.equip(S, who, b.dataset.equip); gearSel = null; again(m); }));
+    $$("[data-remove]", dlg).forEach((b) => (b.onclick = () => { const m = R.unequip(S, who, b.dataset.remove); gearSel = null; again(m); }));
+    $$("[data-upgrade]", dlg).forEach((b) => (b.onclick = () => {
+      if (b.getAttribute("aria-disabled")) return toast(b.textContent);
+      const c = S.collapses, wasBag = gearSel && gearSel.kind === "bag"; const m = R.upgradeGear(S, b.dataset.upgrade);
+      if (wasBag) gearSel = null;
+      save(); render(); if (S.collapses !== c) return showCollapse(); showGear(who, m);
+    }));
+  }
+  function showNotice() {
+    const n = S.notice; S.notice = null; save();
+    modal(S.hour < 12 && S.hour >= 6 ? "A new morning" : "Night falls", `${panel("frontier-20")}<p style="margin-top:10px;color:var(--ink)">${esc(n)}</p>`, [["Continue", () => { if (S.pending) { const id = S.pending; S.pending = null; save(); showBeat(id); } }, "primary"]], { locked: true });
+  }
+  function showDrop(msg) {
+    const d = S.drop; if (!d) return;
+    modal("Something to collect", `${msg ? `<p class="tiny" style="color:var(--accent)">${esc(msg)}</p>` : ""}<p style="color:var(--ink)">The ${esc(d.name.toLowerCase())} is down. You can skin and butcher it for supplies.</p><div class="chips">${Object.entries(d.loot).map(([k, n]) => `<span class="chip ok">${n} ${R.names[k]}</span>`).join("")}</div><p class="tiny">Hides can be tanned into leather at a tanning rack. Claws, leather and pelts make better gear.</p>`, [["Collect everything", () => { const m = R.collect(S); save(); render(); toast(m); }, "primary"]], { locked: true });
+  }
+
   function showGateConfirm() {
     modal("The rift gate", `${panel("frontier-14")}<p style="margin-top:10px">The stone arch hums. Beyond it, light moves like water over an unfamiliar coast. Stepping to the edge closes Part 1 of your story. You can keep playing and building afterward.</p>`, [["Open the gate", () => { commit(() => R.openGate(S)); showFinale(); }, "primary"], ["Not yet"]]);
   }
@@ -329,7 +401,7 @@
       $("#cc", dlg).onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); $(".dlg-actions button", dlg).click(); } };
       return;
     }
-    const opts = [["god", "Invincibility"], ["needs", "Unlimited survival"], ["freeCraft", "Free crafting"], ["safeTravel", "No random ambushes"], ["fastTravel", "Fast travel everywhere (1 hour)"], ["openMap", "Unlock all destinations"]];
+    const opts = [["god", "Invincibility"], ["needs", "Unlimited survival"], ["freeCraft", "Free crafting"], ["safeTravel", "No random ambushes"], ["fastTravel", "Fast travel everywhere (1 hour)"], ["openMap", "Unlock all destinations"], ["noCurfew", "No 10 PM curfew or forced sleep"]];
     modal("Cheats", `<p class="tiny">Turning anything on marks this save “cheats used”.</p>${opts.map(([k, l]) => `<p><label><input type="checkbox" data-cheat="${k}" ${S.cheats[k] ? "checked" : ""}> ${l}</label></p>`).join("")}<div class="row"><button id="c-heal">Restore survival meters</button><button id="c-cache">Spawn supply cache (+50 each)</button></div>`, [["Lock menu", () => { try { sessionStorage.removeItem(KEY); } catch {} }], ["Close"]]);
     $$("[data-cheat]", dlg).forEach((c) => (c.onchange = () => { S.cheats[c.dataset.cheat] = c.checked; S.cheats.everUsed = true; R.clamp(S); save(); render(); }));
     $("#c-heal", dlg).onclick = () => { S.health = S.food = S.water = S.warmth = 100; S.cheats.everUsed = true; save(); render(); toast("Restored."); };
@@ -337,5 +409,5 @@
   }
 
   render();
-  if (S && S.prologue >= 4) { if (S.encounter) showEncounter(); else if (S.stranger) showStranger(); }
+  if (S && S.prologue >= 4) { if (S.encounter) showEncounter(); else if (S.stranger) showStranger(); else if (S.drop) showDrop(); else if (S.notice) showNotice(); }
 })();

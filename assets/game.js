@@ -4,6 +4,7 @@
   const KEY = "echoes-rift-v2";
   const MANUAL_KEY = "echoes-rift-v2-manual";
 
+  const CURFEW = 22; // be back at camp by 10 PM
   const DAILY_LIMIT = 3; // gathers per area per day
   const ENERGY = { max: 100, gather: 8, search: 4, lore: 2, travel: 4, craft: 4, refill: 2, wolf: 6, bear: 6, ravine: 12, defend: 8, nap: 25 };
   const WILD_CHANCE = 0.15;
@@ -16,14 +17,14 @@
   ];
   const EXTRA_LEANTO = { log: 8, leaf: 12, rope: 1 };
   const MAX_LEANTOS = 8, MAX_SURVIVORS = 14;
-  const TASKS = { idle: "Resting", wood: "Gather wood", fish: "Fish", forage: "Forage food", fire: "Tend the fire", heal: "Tend the injured" };
+  const TASKS = { idle: "Resting", wood: "Gather wood", fish: "Fish", forage: "Forage food", fire: "Tend the fire", heal: "Tend the injured", hunt: "Hunt", tan: "Tan hides and sew", cook: "Cook and preserve", guard: "Guard the camp", water: "Haul water" };
 
   const names = {
     log: "Fallen logs", leaf: "Fern leaves", rope: "Rope", sapling: "Birch saplings",
     wire: "Copper wire", scrap: "Metal plates", stone: "Flint & stone", clay: "River clay",
     herb: "Medicinal herbs", berry: "Wild berries", fish: "Raw fish", food: "Preserved rations",
     water: "Bottled water", pelt: "Wolf pelt", energy: "Rift crystals", battery: "Car battery",
-    alternator: "Mustang alternator", trap: "Wooden traps",
+    alternator: "Mustang alternator", trap: "Wooden traps", meat: "Raw meat", hide: "Raw hides", claw: "Claws", leather: "Tanned leather",
   };
 
   // Where each material is usually found. Used for the "what next?" guide.
@@ -41,22 +42,24 @@
     spear: { title: "Iron spear", desc: "Strike for 24 instead of 12.", cost: { scrap: 4, log: 3 }, flag: "spear", requires: "smelter", art: "frontier-03" },
     axe: { title: "Iron axe", desc: "3 extra logs every time you gather timber.", cost: { scrap: 3, log: 2 }, flag: "axe", requires: "smelter", art: "frontier-05" },
     walls: { title: "Reinforced palisade", desc: "Cuts damage from the transmitter defense waves.", cost: { scrap: 4, log: 12 }, flag: "walls", requires: "smelter", art: "frontier-19" },
-    coat: { title: "Heavy winter coats", desc: "Warm coats for you and Maya. Needed for Glacier Peaks.", cost: { pelt: 1, leaf: 8, rope: 2 }, flag: "coat", art: "frontier-02" },
     rope: { title: "Braided fern cord", desc: "Makes 1 rope from tough fern fibers.", cost: { leaf: 5 }, item: "rope", count: 1, art: "frontier-01" },
     trap: { title: "Wooden trap", desc: "Weakens an attacker by 20.", cost: { log: 3, rope: 1 }, item: "trap", count: 1, art: "frontier-02" },
     food: { title: "Preserve food", desc: "Smoke 2 fish into 3 rations. Needs a burning fire.", cost: { fish: 2 }, item: "food", count: 3, requires: "fire", art: "frontier-06" },
     med: { title: "Herbal dressing", desc: "Restores 30 health.", cost: { herb: 3 }, heal: 30, art: "frontier-18" },
+    tanrack: { title: "Tanning rack", desc: "A frame for stretching and curing hides. Needed to tan leather.", cost: { log: 6, rope: 2 }, flag: "tanrack", art: "frontier-05" },
+    leather: { title: "Tan a hide", desc: "Cure 1 raw hide into 1 tanned leather. Leather makes clothing.", cost: { hide: 1, leaf: 2 }, item: "leather", count: 1, requires: "tanrack", art: "frontier-02" },
+    jerky: { title: "Smoke meat", desc: "Smoke 2 raw meat into 3 rations. Needs a burning fire.", cost: { meat: 2 }, item: "food", count: 3, requires: "fire", art: "frontier-06" },
     riftgate: { title: "Rift gate", desc: "A stabilized stone arch. Opens the way to the far shore.", cost: { energy: 20, scrap: 15, wire: 12, stone: 20, log: 20 }, flag: "riftgate", requires: "transmitter", gate: 8, art: "frontier-14" },
     transmitter: { title: "Rift transmitter", desc: "An alternator, a battery and rift crystals: a signal across time.", cost: { alternator: 1, battery: 1, wire: 6, energy: 6, scrap: 6 }, flag: "transmitter", requires: "monolith", art: "frontier-13" },
   };
-  const requireNames = { shelter: "the lean-to", fire: "a campfire", smelter: "the smelter", walls: "the palisade", monolith: "the Rift Monolith", transmitter: "the transmitter" };
+  const requireNames = { shelter: "the lean-to", fire: "a campfire", smelter: "the smelter", walls: "the palisade", monolith: "the Rift Monolith", transmitter: "the transmitter", tanrack: "the tanning rack" };
 
   const quests = [
     { title: "First Shelter", chapter: "I · Settling the wilderness", desc: "Build a lean-to beside the river.", art: "frontier-08" },
     { title: "Fresh Catch", chapter: "I · Settling the wilderness", desc: "Craft a fishing rig so Maya can feed the camp.", art: "frontier-06" },
     { title: "Iron & Flint", chapter: "II · The frontier", desc: "Take Maya to Broken Ridge, salvage the wreck, and build a smelter.", art: "frontier-03" },
     { title: "Apex Predator", chapter: "II · The frontier", desc: "Face the dire wolf at River Bend with an iron spear or 3 wooden traps.", art: "frontier-02" },
-    { title: "Signals in the Mist", chapter: "III · Rift mysteries", desc: "With Maya, winter coats and 6 rations, follow the trail through Foggy Ravine.", art: "frontier-07" },
+    { title: "Signals in the Mist", chapter: "III · Rift mysteries", desc: "With Maya, heavy coats and 6 rations, follow the trail through Foggy Ravine.", art: "frontier-07" },
     { title: "Bridging the Eras", chapter: "III · Rift mysteries", desc: "Build the transmitter, defend it through 3 waves, then connect its circuit.", art: "frontier-13" },
     { title: "The Long Winter", chapter: "IV · The settlement", desc: "Survive until spring. Keep the fire lit, keep everyone fed, and keep survivors sheltered.", art: "frontier-20" },
     { title: "A Community", chapter: "IV · The settlement", desc: "Bring at least 4 survivors to camp and give each of them a bed.", art: "frontier-19" },
@@ -87,10 +90,10 @@
       desc: "Temporary tears drop batteries, wire and metal into the clearing. Crystals glow in the soil.",
       gather: [{ id: "scavenge", label: "Scavenge the rift debris", loot: (s) => ({ energy: s.flags.monolith ? 4 : 2, scrap: 3, wire: 2, ...(s.flags.batteryFound ? {} : { battery: 1 }) }) }] },
     { id: "ravine", name: "Foggy Ravine", x: 645, y: 259, label: "RAVINE", kind: "Quest", art: "frontier-07", gate: 4,
-      desc: "Cairns mark a trail toward the monolith. Bring Maya, winter coats and 6 rations.",
+      desc: "Cairns mark a trail toward the monolith. Bring Maya, heavy coats and 6 rations.",
       gather: [{ id: "forage", label: "Gather stone and herbs", loot: () => ({ stone: 3, herb: 3 }) }] },
     { id: "glacier", name: "Glacier Peaks", x: 315, y: 89, label: "GLACIER", kind: "Highlands", art: "frontier-01", requires: "coat",
-      desc: "Crystals lie among ice-scoured rock. Winter coats are required.",
+      desc: "Crystals lie among ice-scoured rock. You and Maya need heavy coats.",
       gather: [{ id: "chip", label: "Chip crystals from the ice", loot: () => ({ stone: 5, energy: 1 }) }] },
     { id: "den", name: "Cave Bear Den", x: 1240, y: 225, label: "DEN", kind: "Danger", art: "frontier-04", gate: 3,
       desc: "A cave bear shelters under the eastern canopy.",
@@ -175,8 +178,8 @@
     return "We can’t control where we landed. We can control what we make of it.";
   }
   const support = (s) => ({
-    damageReduction: s.withMaya ? (s.flags.committed ? 6 : 3) : 0,
-    bonus: s.flags.committed ? 2 : 0,
+    damageReduction: s.withMaya ? (s.flags.committed ? 6 : 3) + armorOf(gearOf(s, "maya")) : 0,
+    bonus: (s.flags.committed ? 2 : 0) + (toolBonus(gearOf(s, "maya"), "any") > 0 ? 1 : 0),
   });
 
   /* ---- state ---- */
@@ -184,7 +187,7 @@
     return {
       version: 2, name: String(name || "Leo").trim().slice(0, 24) || "Leo",
       started: true, prologue: 0, day: 1, hour: 8,
-      health: 100, food: 100, water: 100, warmth: 85, energy: 100, gathered: {}, shelters: [], survivors: [], stranger: null, spawned: { f: 0, m: 0, c: 0, t: 0 }, deaths: 0,
+      health: 100, food: 100, water: 100, warmth: 85, energy: 100, gathered: {}, shelters: [], gearBag: {}, gear: { hero: {}, maya: {} }, drop: null, survivors: [], stranger: null, spawned: { f: 0, m: 0, c: 0, t: 0 }, deaths: 0,
       loc: "camp", quest: 0, withMaya: false, flags: {},
       inv: { rope: 2, wire: 4, food: 6, water: 5 },
       visited: { camp: true }, found: {}, beats: {}, beatDays: {},
@@ -202,6 +205,13 @@
       if (s.stranger === undefined) s.stranger = null;
       if (!s.spawned) s.spawned = { f: 0, m: 0, c: 0, t: 0 };
       if (s.deaths === undefined) s.deaths = 0;
+      if (!s.gearBag) s.gearBag = {};
+      if (!s.gear) s.gear = { hero: {}, maya: {} };
+      if (!s.gear.hero) s.gear.hero = {};
+      if (!s.gear.maya) s.gear.maya = {};
+      if (s.flags && s.flags.coat && !s.gear.hero.coat && !s.gear.maya.coat) { s.gear.hero.coat = "coat2"; s.gear.maya.coat = "coat2"; }
+      if (s.drop === undefined) s.drop = null;
+      for (const q of s.survivors) { if (!q.gear) q.gear = {}; if (q.ill === undefined) q.ill = q.sick ? 20 : 0; }
     }
     if (!s || s.version !== 2 || typeof s.name !== "string" || s.name.length > 24) return false;
     if (!place(s.loc) || !Number.isInteger(s.quest) || s.quest < 0 || s.quest > 9) return false;
@@ -274,6 +284,116 @@
     const beds = bedCount(s), n = s.survivors.length;
     return { beds, count: n, unhoused: Math.max(0, n - beds) };
   }
+
+  /* ---- gear ---- */
+  const SLOTS = { shirt: "Shirt", pants: "Pants", shoes: "Shoes", gloves: "Gloves", coat: "Coat", tool: "Tool", weapon: "Weapon" };
+  const FAM = {
+    shirt: { slot: "shirt", glyph: "👕", names: ["Hide shirt", "Leather shirt", "Fur-lined shirt"], warm: [1, 2, 3], cost: [{ leather: 2, rope: 1 }, { leather: 3, rope: 1 }, { leather: 4, pelt: 1 }] },
+    pants: { slot: "pants", glyph: "👖", names: ["Hide pants", "Leather pants", "Fur-lined pants"], warm: [1, 2, 3], cost: [{ leather: 2, rope: 1 }, { leather: 3, rope: 1 }, { leather: 4, pelt: 1 }] },
+    shoes: { slot: "shoes", glyph: "🥾", names: ["Hide shoes", "Leather boots", "Fur-lined boots"], warm: [1, 2, 3], cost: [{ leather: 1, rope: 1 }, { leather: 2, rope: 1 }, { leather: 3, pelt: 1 }] },
+    gloves: { slot: "gloves", glyph: "🧤", names: ["Hide gloves", "Leather gloves", "Fur-lined gloves"], warm: [1, 2, 3], cost: [{ leather: 1, rope: 1 }, { leather: 2, rope: 1 }, { leather: 3, pelt: 1 }] },
+    coat: { slot: "coat", glyph: "🧥", names: ["Light coat", "Heavy coat", "Fur-lined coat"], warm: [2, 4, 6], cost: [{ leather: 2, leaf: 4, rope: 1 }, { leather: 2, leaf: 6, rope: 2 }, { leather: 4, pelt: 1, rope: 2 }] },
+    axe: { slot: "tool", glyph: "🪓", kind: "wood", names: ["Stone axe", "Iron axe"], bonus: [2, 4], cost: [{ log: 2, stone: 3, rope: 1 }, { scrap: 3, log: 1 }], req: ["", "smelter"] },
+    pole: { slot: "tool", glyph: "🎣", kind: "fish", names: ["Fishing pole", "Barbed pole"], bonus: [2, 3], cost: [{ sapling: 2, rope: 1 }, { claw: 2, wire: 1 }] },
+    basket: { slot: "tool", glyph: "🧺", kind: "forage", names: ["Berry basket", "Lined basket"], bonus: [2, 3], cost: [{ leaf: 8, rope: 1 }, { leather: 2, rope: 1 }] },
+    spear: { slot: "weapon", glyph: "🔱", names: ["Wooden spear", "Claw spear", "Iron spear"], dmg: [6, 10, 14], cost: [{ log: 2, stone: 1, rope: 1 }, { claw: 3, rope: 1 }, { scrap: 4, log: 1 }], req: ["", "", "smelter"] },
+  };
+  const GEAR = {};
+  for (const [fam, f] of Object.entries(FAM)) f.names.forEach((name, i) => {
+    GEAR[fam + (i + 1)] = { id: fam + (i + 1), fam, tier: i + 1, max: f.names.length, slot: f.slot, glyph: f.glyph, name, warm: (f.warm || [])[i] || 0, bonus: (f.bonus || [])[i] || 0, dmg: (f.dmg || [])[i] || 0, kind: f.kind || "", cost: f.cost[i], requires: (f.req || [])[i] || "" };
+  });
+  const gearOf = (s, who) => {
+    if (who === "hero" || who === "maya") { if (!s.gear) s.gear = { hero: {}, maya: {} }; return s.gear[who] || (s.gear[who] = {}); }
+    const p = (s.survivors || []).find((x) => x.id === who);
+    return p ? p.gear || (p.gear = {}) : {};
+  };
+  const eachItem = (g, fn) => { for (const id of Object.values(g)) if (GEAR[id]) fn(GEAR[id]); };
+  const warmOf = (g) => { let n = 0; eachItem(g, (i) => (n += i.warm)); return n; };
+  const armorOf = (g) => Math.min(3, Math.floor(warmOf(g) / 5));
+  const weaponDmg = (g) => { let n = 0; eachItem(g, (i) => i.slot === "weapon" && (n += i.dmg)); return n; };
+  const toolBonus = (g, kind) => { let n = 0; eachItem(g, (i) => i.slot === "tool" && (kind === "any" || i.kind === kind) && (n += i.bonus)); return n; };
+  const heavyCoat = (g) => !!(g.coat && GEAR[g.coat] && GEAR[g.coat].tier >= 2);
+  const canHunt = (g) => weaponDmg(g) > 0 || toolBonus(g, "wood") > 0;
+  const itemDesc = (i) => [i.warm ? "+" + i.warm + " warmth" : "", i.bonus ? "+" + i.bonus + " " + ({ wood: "logs", fish: "fish", forage: "berries" }[i.kind]) + " per task" : "", i.dmg ? "+" + i.dmg + " damage" : ""].filter(Boolean).join(", ");
+  const gearLock = (s, itemId) => {
+    const i = GEAR[itemId];
+    if (!i) return "Unknown item.";
+    if (i.requires && !s.flags[i.requires]) return "Needs " + requireNames[i.requires] + " first.";
+    return "";
+  };
+  const bagAdd = (s, id, n = 1) => { s.gearBag[id] = (s.gearBag[id] || 0) + n; if (s.gearBag[id] <= 0) delete s.gearBag[id]; };
+  function craftGear(s, fam) {
+    const id = fam + "1", i = GEAR[id];
+    if (!i) return "Unknown item.";
+    if (s.loc !== "camp") return "Return to camp to craft.";
+    if (s.encounter || s.stranger) return "Deal with the danger first.";
+    if (gearLock(s, id)) return gearLock(s, id);
+    if (s.energy < ENERGY.craft) return "Too tired. Sleep or rest first.";
+    if (!s.cheats.freeCraft && !can(s, i.cost)) return "Not enough materials.";
+    if (!s.cheats.freeCraft) pay(s, i.cost);
+    spend(s, ENERGY.craft); bagAdd(s, id); tick(s, 1);
+    note(s, "Crafted: " + i.name + ".");
+    return "Crafted " + i.name + ".";
+  }
+  // ref: "bag:<itemId>" for an item in the pack, or "<who>:<slot>" for something being worn.
+  function upgradeGear(s, ref) {
+    const [where, key] = String(ref).split(":");
+    const cur = where === "bag" ? GEAR[key] : GEAR[gearOf(s, where)[key]];
+    if (!cur || (where === "bag" && !s.gearBag[key])) return "No such item.";
+    if (s.loc !== "camp") return "Return to camp to upgrade.";
+    if (s.encounter || s.stranger) return "Deal with the danger first.";
+    const nxt = GEAR[cur.fam + (cur.tier + 1)];
+    if (!nxt) return "Fully upgraded.";
+    if (gearLock(s, nxt.id)) return gearLock(s, nxt.id);
+    if (s.energy < ENERGY.craft) return "Too tired. Sleep or rest first.";
+    if (!s.cheats.freeCraft && !can(s, nxt.cost)) return "Not enough materials.";
+    if (!s.cheats.freeCraft) pay(s, nxt.cost);
+    spend(s, ENERGY.craft);
+    if (where === "bag") { bagAdd(s, cur.id, -1); bagAdd(s, nxt.id); } else gearOf(s, where)[key] = nxt.id;
+    tick(s, 1);
+    note(s, cur.name + " upgraded to " + nxt.name + ".");
+    coatCheck(s);
+    return "Upgraded to " + nxt.name + ".";
+  }
+  // Two heavy coats (you and Maya) also satisfy the old winter-coat requirement for the ravine.
+  function coatCheck(s) {
+    if (heavyCoat(gearOf(s, "hero")) && heavyCoat(gearOf(s, "maya"))) s.flags.coat = true;
+  }
+  function equip(s, who, itemId) {
+    if (s.loc !== "camp") return "Return to camp to change gear.";
+    const i = GEAR[itemId];
+    if (!i || !(s.gearBag[itemId] > 0)) return "That item is not in the pack.";
+    const g = gearOf(s, who);
+    if (who !== "hero" && who !== "maya" && !s.survivors.find((x) => x.id === who)) return "No such person.";
+    const p = s.survivors.find((x) => x.id === who);
+    if (p && p.child && (i.slot === "tool" || i.slot === "weapon")) return p.name + " is too young for tools and weapons.";
+    const old = g[i.slot];
+    bagAdd(s, itemId, -1);
+    if (old) bagAdd(s, old);
+    g[i.slot] = itemId;
+    coatCheck(s);
+    return i.name + " equipped.";
+  }
+  function unequip(s, who, slot) {
+    if (s.loc !== "camp") return "Return to camp to change gear.";
+    const g = gearOf(s, who);
+    if (!g[slot]) return "Nothing equipped.";
+    bagAdd(s, g[slot]); delete g[slot];
+    return "Removed.";
+  }
+  const DROPS = {
+    "Dire wolf": { meat: 3, hide: 2, claw: 2 }, "Wounded dire wolf": { meat: 4, hide: 3, claw: 3, pelt: 1 },
+    "Dire wolf pack": { meat: 5, hide: 3, claw: 4 }, "Cave bear": { meat: 6, hide: 3, claw: 4, pelt: 1 },
+    "Rift-displaced terror bird": { meat: 4, hide: 1, claw: 3 },
+  };
+  function collect(s) {
+    if (!s.drop) return "Nothing to collect.";
+    for (const [k, n] of Object.entries(s.drop.loot)) add(s, k, n);
+    note(s, "You skin and butcher the " + s.drop.name.toLowerCase() + ". Collected " + list_(s.drop.loot) + ".");
+    const msg = "Collected " + list_(s.drop.loot) + ".";
+    s.drop = null;
+    return msg;
+  }
   const able = (p) => !p.child && !p.injured && !p.sick && p.health >= 30;
   const hasTender = (s) => s.survivors.some((p) => able(p) && p.task === "fire");
   function feedSurvivors(s, n) {
@@ -288,27 +408,72 @@
   }
   const FIND_TEXT = ["a handful of bright river stones", "a coil of cord", "some ripe berries", "a smooth lump of clay", "a spool of copper wire", "an armful of ferns"];
   const FIND_LOOT = [{ stone: 2 }, { rope: 1 }, { berry: 3 }, { clay: 2 }, { wire: 1 }, { leaf: 4 }];
+  // Chores can hurt or sicken people. Warm clothes and weapons lower the odds.
+  function risk(s, p, base, label) {
+    const g = p.gear || {};
+    const chance = Math.max(0.02, base + (seasonOf(s.day) === "Winter" ? 0.04 : 0) - warmOf(g) * 0.006 - weaponDmg(g) * 0.004 - armorOf(g) * 0.01);
+    if (random(s) >= chance) return;
+    if (random(s) < 0.7) { p.injured = true; p.health = Math.max(1, p.health - 15); note(s, p.name + " was hurt while " + label + "."); }
+    else if (!p.sick) { p.sick = true; p.ill = Math.max(p.ill || 0, 10); note(s, p.name + " came back from " + label + " feeling ill."); }
+  }
+  const guardCount = (s) => s.survivors.filter((p) => able(p) && p.task === "guard").length;
   function survivorsDay(s) {
     const list = s.survivors;
     if (!list.length) return;
     const winter = seasonOf(s.day) === "Winter", beds = bedCount(s), best = bestLevel(s);
-    const out = { wood: 0, fish: 0, herb: 0, berry: 0 };
+    const out = { wood: 0, fish: 0, herb: 0, berry: 0, meat: 0, hide: 0, claw: 0, water: 0 };
     for (const p of list) {
       if (!able(p)) continue;
-      if (p.task === "wood") out.wood += 4;
-      if (p.task === "fish") { if (s.flags.fishing && (s.quest < 3 || s.flags.wolf)) out.fish += 3; else { out.herb += 1; out.berry += 2; } }
-      if (p.task === "forage") { out.herb += 2; out.berry += 2; }
+      const g = p.gear || {};
+      if (p.task === "wood") { out.wood += 4 + toolBonus(g, "wood"); risk(s, p, 0.06, "chopping wood"); }
+      if (p.task === "fish") { if (s.flags.fishing && (s.quest < 3 || s.flags.wolf)) out.fish += 3 + toolBonus(g, "fish"); else { out.herb += 1; out.berry += 2; } risk(s, p, 0.05, "fishing"); }
+      if (p.task === "forage") { out.herb += 2; out.berry += 2 + toolBonus(g, "forage"); risk(s, p, 0.06, "foraging"); }
+      if (p.task === "water") { out.water += 4; risk(s, p, 0.04, "hauling water"); }
+      if (p.task === "guard") risk(s, p, 0.07, "standing guard");
+      if (p.task === "hunt") {
+        if (!canHunt(g)) note(s, p.name + " has nothing to hunt with. Equip a spear or an axe.");
+        else {
+          out.meat += 2 + (weaponDmg(g) >= 10 ? 1 : 0);
+          if (random(s) < 0.6) out.hide += 1;
+          if (random(s) < 0.35) out.claw += 1;
+          risk(s, p, 0.22, "hunting");
+        }
+      }
     }
     seasonLoot(s, out);
     const made = Object.entries(out).filter(([, n]) => n > 0).map(([k, n]) => [k === "wood" ? "log" : k, n]);
     for (const [k, n] of made) add(s, k, n);
     if (made.length) note(s, "Your survivors brought in " + list_(Object.fromEntries(made)) + ".");
-    // Healers tend up to two patients each.
-    const healers = list.filter((p) => able(p) && p.task === "heal").length;
-    let slots = healers * 2;
+    // Tanners cure hides; cooks smoke meat and fish (the fire must be burning).
     for (const p of list) {
+      if (!able(p)) continue;
+      if (p.task === "tan") {
+        if (!s.flags.tanrack) { note(s, p.name + " needs a tanning rack."); continue; }
+        const n = Math.min(2, s.inv.hide || 0);
+        if (n) { s.inv.hide -= n; add(s, "leather", n); note(s, p.name + " tanned " + n + (n === 1 ? " hide." : " hides.")); }
+      }
+      if (p.task === "cook") {
+        if (!s.flags.fire) { note(s, p.name + " cannot cook. The fire is out."); continue; }
+        let pairs = 0;
+        for (; pairs < 2; pairs++) {
+          if ((s.inv.meat || 0) >= 2) s.inv.meat -= 2;
+          else if ((s.inv.fish || 0) >= 2) s.inv.fish -= 2;
+          else if ((s.inv.meat || 0) >= 1 && (s.inv.fish || 0) >= 1) { s.inv.meat--; s.inv.fish--; }
+          else break;
+        }
+        if (pairs) { add(s, "food", pairs * 3); note(s, p.name + " smoked " + pairs * 3 + " rations."); }
+      }
+    }
+    // Healers tend up to two patients each: 1 herb for injuries and health under 50%, 2 herbs for sickness.
+    let slots = list.filter((p) => able(p) && p.task === "heal").length * 2;
+    const patients = list.filter((p) => p.injured || p.sick || p.health < 50).sort((a, b) => a.health - b.health);
+    for (const p of patients) {
       if (slots <= 0) break;
-      if (p.injured || p.sick) { slots--; if (p.injured) { p.injured = false; p.health = Math.min(100, p.health + 20); } p.sick = false; note(s, p.name + " was tended and is recovering."); }
+      let did = false;
+      if (p.sick && (s.inv.herb || 0) >= 2) { s.inv.herb -= 2; p.sick = false; p.ill = 0; did = true; }
+      if ((p.injured || p.health < 50) && (s.inv.herb || 0) >= 1) { s.inv.herb -= 1; p.injured = false; p.health = Math.min(100, p.health + 25); did = true; }
+      if (did) { slots--; note(s, p.name + " was tended and is recovering."); }
+      else note(s, "Not enough herbs to treat " + p.name + ".");
     }
     const fed = feedSurvivors(s, list.length);
     if (fed < list.length) note(s, "There was not enough food for everyone in camp.");
@@ -316,11 +481,16 @@
     list.forEach((p, i) => {
       const isFed = i < fed, housed = i < beds;
       let d = isFed ? 0 : -15;
+      const exposure = (winter ? 10 : 0) + (s.flags.fire ? 0 : 6) + (isFed ? 0 : 8) + (housed ? 0 : 10) - warmOf(p.gear || {}) * 1.2;
       if (housed) { d += 3 + (best >= 2 ? 3 : 0); if (winter && best < 1) d -= 4; }
-      else { d -= 12 + (winter ? 6 : 0); if (!p.sick && random(s) < 0.3) { p.sick = true; note(s, p.name + " has fallen ill sleeping in the open."); } }
-      if (housed && !p.sick && random(s) < 0.04 && best < 1) { p.sick = true; note(s, p.name + " has a fever."); }
-      if (p.sick) { d -= 8; if (housed && best >= 2 && random(s) < 0.4) { p.sick = false; note(s, p.name + " shook off the fever."); } }
-      if (p.injured && !housed) d -= 3;
+      else d -= 12 + (winter ? 6 : 0);
+      if (!p.sick && exposure > 0 && random(s) < exposure / 50) { p.sick = true; p.ill = 10; note(s, p.name + (housed ? " has a fever." : " has fallen ill sleeping in the open.")); }
+      if (p.sick) {
+        p.ill = Math.min(100, (p.ill || 0) + 20 + Math.max(0, exposure) / 2);
+        if (housed && best >= 2 && random(s) < 0.4) { p.sick = false; p.ill = 0; note(s, p.name + " shook off the fever."); }
+        else if (p.ill >= 100) d -= 10;
+      }
+      if (p.injured) d -= 5;
       p.health = Math.max(0, Math.min(100, p.health + d));
       if (p.child && isFed && random(s) < 0.4) {
         const k = Math.floor(random(s) * FIND_TEXT.length);
@@ -332,7 +502,7 @@
     if (dead.length) {
       s.survivors = list.filter((p) => !dead.includes(p));
       s.deaths += dead.length;
-      for (const p of dead) note(s, p.name + " did not survive. Shelter and food matter.");
+      for (const p of dead) { for (const id of Object.values(p.gear || {})) bagAdd(s, id); note(s, p.name + " did not survive. Shelter and food matter."); }
     }
     const low = s.survivors.filter((p) => p.health < 40).length;
     if (low) note(s, low + (low === 1 ? " survivor is" : " survivors are") + " in poor health. Check the survivors panel.");
@@ -373,12 +543,19 @@
       if (s.cheats.needs) { s.food = 100; s.water = 100; s.warmth = 100; s.energy = 100; }
       const startLoc = s.loc;
       s.hour++;
+      if (s.hour === CURFEW - 2 && s.loc !== "camp" && !s.cheats.noCurfew) note(s, "Dusk is near. Be back at camp by 10 PM.");
+      if (s.hour >= CURFEW && s.loc !== "camp" && !s.encounter && !s.homebound && !s.cheats.noCurfew) {
+        s.loc = "camp"; s.visited.camp = true; s.stranger = null; s.warmth -= 10;
+        note(s, "Night falls. You stumble back to camp in the dark, cold and shaken.");
+        s.notice = "Night fell while you were still out. You stumble back to camp in the dark, cold and shaken.";
+      }
       const season = seasonOf(s.day);
       s.food -= 2; s.water -= season === "Summer" ? 4 : 3;
       const night = s.hour >= 19 || s.hour < 6;
       const homeNight = startLoc === "camp" && s.flags.shelter ? (mainLevel(s) >= 1 ? -1 : -2) : -4;
-      s.warmth += (s.flags.coat ? 1 : night ? homeNight : -1) - (season === "Winter" ? 2 : 0);
+      s.warmth += (heavyCoat(gearOf(s, "hero")) ? 1 : night ? homeNight : -1) - (season === "Winter" ? 2 : 0);
       if (startLoc === "camp" && s.flags.fire) s.warmth += 6;
+      s.warmth += Math.min(2, Math.floor(warmOf(gearOf(s, "hero")) / 6));
       if (s.food <= 0) s.health -= 4;
       if (s.water <= 0) s.health -= 6;
       if (s.warmth < 25) s.health -= 3;
@@ -387,6 +564,13 @@
       const before = s.collapses;
       clamp(s);
       if (s.collapses !== before) break;
+      if (s.hour === 0 && !s.sleeping && !s.cheats.noCurfew) {
+        note(s, "Midnight. You cannot keep your eyes open and sleep until morning.");
+        s.sleeping = true; tick(s, 8); s.sleeping = false;
+        if (s.loc === "camp") recover(s, "You sleep through the night.");
+        s.notice = "Midnight. You cannot keep your eyes open. You sleep through the night and wake at " + (s.hour % 12 || 12) + ":00 " + (s.hour < 12 ? "AM" : "PM") + " on day " + s.day + ".";
+        break;
+      }
     }
   }
 
@@ -436,8 +620,9 @@
     }
     if (q === 4) {
       if (!s.flags.coat) {
-        const g = gatherFor("coat", "Open Build at camp and make the winter coats.");
-        return { title: quests[4].title, ...(s.inv.pelt ? g : { place: "camp", text: "You need a wolf pelt for the coats." }) };
+        if (!s.flags.tanrack) return { title: quests[4].title, place: "camp", text: "Build a tanning rack at camp. You and Maya each need a heavy coat, and coats are made from leather." };
+        if ((s.inv.leather || 0) + (s.inv.hide || 0) < 4 && !Object.keys(s.gearBag).some((k) => k.startsWith("coat"))) return { title: quests[4].title, place: "forest", text: "Equip a spear and hunt game for hides, tan them into leather, and make coats. Hides also drop from animals you defeat." };
+        return { title: quests[4].title, place: "camp", text: "Craft a Light coat for you and for Maya, upgrade both to a Heavy coat, and equip them in Gear and equipment." };
       }
       if ((s.inv.food || 0) < 6) return { title: quests[4].title, place: "river", text: "Carry 6 rations. Fish at River Bend, then preserve fish at camp." };
       if (!s.withMaya) return { title: quests[4].title, place: "camp", text: "Ask Maya to come along, then travel to Foggy Ravine." };
@@ -466,6 +651,10 @@
   function lootFor(s, a) {
     const loot = seasonLoot(s, a.loot(s));
     if (s.flags.committed && s.withMaya) for (const k of ["herb", "berry", "sapling"]) if (loot[k]) loot[k] += 2;
+    const hg = gearOf(s, "hero");
+    if (loot.log) loot.log += toolBonus(hg, "wood");
+    if (loot.fish) loot.fish += toolBonus(hg, "fish");
+    if (loot.berry) loot.berry += toolBonus(hg, "forage");
     return loot;
   }
   const tiredWhy = (s, cost) => (s.energy < cost ? (s.loc === "camp" ? "Too tired. Sleep or rest first." : "Too tired. Return to camp to rest.") : "");
@@ -475,7 +664,10 @@
   function actionsFor(s) {
     const p = place(s.loc), out = [];
     const busy = s.encounter ? "Resolve the encounter first." : s.stranger ? "Deal with the stranger first." : "";
-    const push = (type, id, label, sub, disabled = "", extra = {}) => out.push({ type, id, label, sub, disabled: disabled || busy, ...extra });
+    const late = s.loc === "camp" && s.hour >= CURFEW && !s.cheats.noCurfew;
+    const LATE_OK = ["rest", "nap", "talk", "build", "gear", "survivors", "warn", "maya"];
+    const dark = "It is too dark. Tonight you can only check on survivors, craft, talk or rest. You sleep at midnight.";
+    const push = (type, id, label, sub, disabled = "", extra = {}) => out.push({ type, id, label, sub, disabled: disabled || busy || (late && !LATE_OK.includes(type) ? dark : ""), ...extra });
     if (s.loc === "camp") {
       const ready = beatReady(s, "talk"), wait = beatWaiting(s);
       push("rest", "rest", "Sleep in the lean-to", "8 hours · full energy · +30 health", s.flags.shelter ? "" : "Build the lean-to first.");
@@ -484,6 +676,7 @@
       push("build", "build", "Build and craft", "Open the workbench · " + ENERGY.craft + " energy each");
       push("refill", "refill", "Fill water bottles", "1 hour · " + ENERGY.refill + " energy · +3 bottles", tiredWhy(s, ENERGY.refill));
       push("maya", "maya", s.withMaya ? "Leave Maya at camp" : "Take Maya along", s.withMaya ? "She will fish or forage while you are away" : "Herb bonus, ambush warning, combat help");
+      if (s.flags.shelter) push("gear", "gear", "Gear and equipment", "Clothing, tools and weapons for you, Maya and your survivors");
       if (s.survivors.length) {
         const h = housing(s), sick = s.survivors.filter((p) => p.injured || p.sick).length;
         push("survivors", "survivors", "Check on survivors", s.survivors.length + " in camp" + (h.unhoused ? " · " + h.unhoused + " without a bed" : "") + (sick ? " · " + sick + " need care" : ""), "", { glow: h.unhoused > 0 || sick > 0 });
@@ -503,6 +696,10 @@
         if (a.needsMaya && !s.withMaya) why = a.needsMaya;
         push("gather", a.id, a.label, "1 hour · " + ENERGY.gather + " energy · " + Math.max(0, left) + " of " + DAILY_LIMIT + " left today · " + list(lootFor(s, a)), why);
       }
+      if (["forest", "grove", "river"].includes(s.loc) && s.quest >= 1) {
+        const g = gearOf(s, "hero"), left = gatherLeft(s, "hunt");
+        push("hunt", "hunt", "Hunt game", canHunt(g) ? "1 hour · " + ENERGY.gather + " energy · " + Math.max(0, left) + " of " + DAILY_LIMIT + " left today · meat, hides, claws" : "Equip a spear or an axe first (Gear and equipment at camp)", !canHunt(g) ? "Equip a spear or an axe first." : left <= 0 ? "No more game today. It refreshes at midnight." : tiredWhy(s, ENERGY.gather));
+      }
       if (s.loc === "river") {
         push("refill", "refill", "Fill water bottles", "1 hour · " + ENERGY.refill + " energy · +3 bottles", tiredWhy(s, ENERGY.refill));
         if (s.quest === 3) {
@@ -512,7 +709,7 @@
       }
       if (s.loc === "den") push("bear", "bear", "Confront the cave bear", "Optional · turn-based fight · " + ENERGY.bear + " energy", tiredWhy(s, ENERGY.bear));
       if (s.loc === "ravine" && s.quest === 4) {
-        const why = !s.flags.coat || !s.withMaya || !can(s, { food: 6 }) ? "Bring Maya, winter coats and 6 rations." : tiredWhy(s, ENERGY.ravine);
+        const why = !s.flags.coat || !s.withMaya || !can(s, { food: 6 }) ? "Bring Maya, heavy coats and 6 rations." : tiredWhy(s, ENERGY.ravine);
         push("ravine", "ravine", "Follow the cairn trail", "Quest · puzzle · " + ENERGY.ravine + " energy · uses 6 rations", why, { quest: true });
       }
     }
@@ -537,12 +734,14 @@
     return "";
   }
   function act(s, type, id) {
+    if (s.drop) collect(s);
     const g = guard(s);
     if (g) return g;
     const a = actionsFor(s).find((x) => x.type === type && x.id === id);
     if (!a) return "That is not possible here.";
     if (a.disabled) return a.disabled;
     if (type === "gather") return gather(s, id);
+    if (type === "hunt") return huntHero(s);
     if (type === "rest") return rest(s);
     if (type === "nap") { tick(s, 1); s.energy += ENERGY.nap; clamp(s); note(s, "You rest by the fire for an hour."); return "You feel a little fresher."; }
     if (type === "refill") return refill(s);
@@ -559,6 +758,19 @@
     if (s.withMaya && random(s) < 0.5) { note(s, "Maya spots movement and waves you back. You avoid trouble."); return; }
     s.encounter = { name: ["ridge", "den"].includes(s.loc) ? "Cave bear" : s.loc === "grove" ? "Rift-displaced terror bird" : "Dire wolf", hp: 45, max: 45, damage: 10 };
     note(s, "An animal interrupts your work.");
+  }
+  function huntHero(s) {
+    const g = gearOf(s, "hero");
+    const out = { meat: 2 + (weaponDmg(g) >= 10 ? 1 : 0), hide: 1 };
+    if (random(s) < 0.35) out.claw = 1;
+    for (const [k, n] of Object.entries(out)) add(s, k, n);
+    const key = gatherKey(s, "hunt"), gg = s.gathered[key];
+    s.gathered[key] = { day: s.day, n: (gg && gg.day === s.day ? gg.n : 0) + 1 };
+    spend(s, ENERGY.gather); tick(s, 1);
+    note(s, "You bring down game. Collected " + list_(out) + ".");
+    progress(s);
+    if (s.loc !== "camp") wildEncounter(s);
+    return "Collected " + list_(out) + ".";
   }
   function gather(s, id) {
     const a = (place(s.loc).gather || []).find((x) => x.id === id);
@@ -580,13 +792,19 @@
     add(s, "water", 3); tick(s, 1);
     return "Filled 3 bottles.";
   }
-  function rest(s) {
-    tick(s, 8);
-    if (s.loc === "camp") {
+  function recover(s, text) {
+    if (s.flags.shelter) {
       s.health += 30 + (mainLevel(s) >= 2 ? 10 : 0); s.warmth += s.flags.fire ? 35 : 5; s.energy = ENERGY.max; clamp(s);
-      note(s, "Eight hours of sleep. Health and energy restored.");
-      s.pending = beatReady(s, "rest");
+      note(s, text + " Health and energy restored.");
+    } else {
+      s.health += 8; s.warmth += s.flags.fire ? 20 : 0; s.energy = Math.max(s.energy, 70); clamp(s);
+      note(s, text + " Without a shelter you only rest a little.");
     }
+    s.pending = beatReady(s, "rest");
+  }
+  function rest(s) {
+    s.sleeping = true; tick(s, 8); s.sleeping = false;
+    if (s.loc === "camp") recover(s, "Eight hours of sleep.");
     return "You wake rested.";
   }
   // Talk: a ready story moment, or a line from Maya.
@@ -620,6 +838,7 @@
     return "";
   }
   function craft(s, id) {
+    if (s.drop) collect(s);
     if (s.loc !== "camp") return "Return to camp to use the workbench.";
     if (s.encounter) return "Resolve the encounter first.";
     const lock = recipeLock(s, id), r = recipes[id];
@@ -739,7 +958,7 @@
     if (s.survivors.length >= MAX_SURVIVORS) return "The camp cannot support anyone else.";
     if (s.energy < ENERGY.travel) return "Too tired to guide them. Rest first.";
     spend(s, ENERGY.travel);
-    s.survivors.push({ id: "p" + s.spawned.t + "-" + s.day, name: p.name, sex: p.sex, child: p.child, health: p.injured ? 45 : 90, injured: p.injured, sick: false, task: "idle", joined: s.day });
+    s.survivors.push({ id: "p" + s.spawned.t + "-" + s.day, name: p.name, sex: p.sex, child: p.child, health: p.injured ? 45 : 90, injured: p.injured, sick: false, ill: 0, gear: {}, task: "idle", joined: s.day });
     s.stranger = null;
     s.loc = "camp"; s.visited.camp = true;
     tick(s, 2);
@@ -772,17 +991,22 @@
     if (!p) return "No such survivor.";
     if (p.child) return p.name + " is too young for chores. Children sometimes find useful things on their own.";
     if (!Object.hasOwn(TASKS, task)) return "Unknown task.";
+    if (task === "hunt" && !canHunt(p.gear || {})) return p.name + " needs a spear or an axe equipped to hunt.";
+    if (task === "tan" && !s.flags.tanrack) return "Build a tanning rack first.";
     p.task = task;
     return p.name + ": " + TASKS[task] + ".";
   }
   function treat(s, id) {
     const p = s.survivors.find((x) => x.id === id);
-    if (!p || (!p.injured && !p.sick)) return "They do not need treatment.";
+    const needHp = p && (p.injured || p.health < 50), needSick = p && p.sick;
+    if (!p || (!needHp && !needSick)) return "They do not need treatment.";
     if (s.loc !== "camp") return "Return to camp.";
-    if (!can(s, { herb: 1 })) return "You need 1 medicinal herb.";
+    const cost = (needHp ? 1 : 0) + (needSick ? 2 : 0);
+    if (!can(s, { herb: cost })) return "You need " + cost + " medicinal " + (cost === 1 ? "herb" : "herbs") + " (1 for injuries, 2 for sickness).";
     if (s.energy < 5) return "Too tired. Sleep or rest first.";
-    pay(s, { herb: 1 }); spend(s, 5);
-    p.injured = false; p.sick = false; p.health = Math.min(100, p.health + 25);
+    pay(s, { herb: cost }); spend(s, 5);
+    if (needHp) { p.injured = false; p.health = Math.min(100, p.health + 25); }
+    if (needSick) { p.sick = false; p.ill = 0; }
     tick(s, 1);
     note(s, "You treated " + p.name + ".");
     return p.name + " is looking better.";
@@ -799,13 +1023,15 @@
   function travelLock(s, id) {
     const p = place(id);
     if (!p) return "Unknown destination.";
+    if (!s.cheats.noCurfew && id !== "camp" && s.hour + travelHours(s, id) >= CURFEW) return s.loc === "camp" ? "It is too late to head out. Night is falling. Rest by the fire until morning." : "Dusk is near. Head back to camp.";
     if (s.cheats.openMap) return "";
-    if (p.requires && !s.flags[p.requires]) return p.requires === "coat" ? "Craft winter coats before climbing Glacier Peaks." : "Find the monolith in Foggy Ravine first.";
+    if (p.requires && !s.flags[p.requires]) return p.requires === "coat" ? "Equip heavy coats on you and Maya before climbing Glacier Peaks." : "Find the monolith in Foggy Ravine first.";
     if (p.gate && s.quest < p.gate) return "Complete “" + quests[p.gate - 1].title + "” to reach " + p.name + ".";
     return "";
   }
   const travelHours = (s, id) => (s.cheats.fastTravel || (s.flags.signal && s.visited[id]) ? 1 : 2);
   function travel(s, id) {
+    if (s.drop) collect(s);
     if (s.encounter) return "Resolve the encounter first.";
     if (s.stranger) return "Deal with the stranger first.";
     if (s.loc === id) return "You are already here.";
@@ -816,7 +1042,7 @@
     else spend(s, ENERGY.travel);
     const hours = travelHours(s, id);
     s.loc = id; s.visited[id] = true;
-    tick(s, hours);
+    s.homebound = id === "camp"; tick(s, hours); s.homebound = false;
     if (s.loc !== id) return "You black out on the trail.";
     note(s, "Reached " + place(id).name + ".");
     // No surprise fights until the camp is established (after Fresh Catch).
@@ -836,7 +1062,7 @@
     return "The wounded dire wolf steps out of the reeds.";
   }
   function defend(s) {
-    s.encounter = { name: ["Dire wolf pack", "Cave bear", "Rift-displaced terror bird"][s.waves], hp: 45 + s.waves * 15, max: 45 + s.waves * 15, damage: Math.max(3, (s.flags.walls ? 7 : 12) - (mainLevel(s) >= 1 ? 2 : 0)), wave: true };
+    s.encounter = { name: ["Dire wolf pack", "Cave bear", "Rift-displaced terror bird"][s.waves], hp: 45 + s.waves * 15, max: 45 + s.waves * 15, damage: Math.max(2, (s.flags.walls ? 7 : 12) - (mainLevel(s) >= 1 ? 2 : 0) - Math.min(6, guardCount(s) * 2)), wave: true };
     return "Defense wave " + (s.waves + 1) + " begins.";
   }
   function fight(s, action) {
@@ -849,29 +1075,30 @@
     }
     if (action === "trap") { if (!can(s, { trap: 1 })) return "No traps left."; pay(s, { trap: 1 }); e.hp -= 20; }
     else if (action === "flare") { if (!can(s, { energy: 1 })) return "You need a rift crystal."; pay(s, { energy: 1 }); e.hp -= 30; }
-    else e.hp -= s.flags.spear ? 24 : 12;
+    else e.hp -= (s.flags.spear ? 24 : 12) + weaponDmg(gearOf(s, "hero")) + (s.withMaya ? Math.floor(weaponDmg(gearOf(s, "maya")) / 2) : 0);
     if (e.hp > 0) {
       const before = s.collapses;
-      s.health -= Math.max(0, e.damage - support(s).damageReduction);
+      s.health -= Math.max(0, e.damage - support(s).damageReduction - armorOf(gearOf(s, "hero")));
       clamp(s);
       return s.collapses !== before ? "You fall. Maya drags you back to camp." : "The animal strikes back.";
     }
-    if (e.boss) { s.flags.wolf = true; add(s, "pelt", 1); note(s, "The river is safe. A winter pelt remains."); }
+    if (e.boss) { s.flags.wolf = true; note(s, "The river is safe. The wolf lies still."); }
     else if (e.wave) { s.waves++; note(s, "Transmitter defense wave " + s.waves + " survived."); }
     else if (e.human) { add(s, "food", 1); add(s, "scrap", 2); note(s, "The stranger drops the spear and flees into the trees. You recover a ration and some scrap."); }
     else { add(s, "food", 1); note(s, "The threat retreats. You recover a ration from your dropped pack."); }
+    if (DROPS[e.name]) s.drop = { name: e.name, loot: { ...DROPS[e.name] } };
     s.encounter = null;
     tick(s, 1);
     progress(s);
     clamp(s);
-    return "Encounter survived.";
+    return s.drop ? "Encounter survived. Something is left to collect." : "Encounter survived.";
   }
 
   /* ---- puzzles ---- */
   const TRAIL = [1, 5, 6, 10, 14, 15];
   const CIRCUIT = ["battery", "alternator", "crystal", "antenna"];
   function discover(s, path) {
-    if (s.loc !== "ravine" || s.quest !== 4 || !s.flags.coat || !s.withMaya || !can(s, { food: 6 })) return "Bring Maya, winter coats and 6 rations to Foggy Ravine.";
+    if (s.loc !== "ravine" || s.quest !== 4 || !s.flags.coat || !s.withMaya || !can(s, { food: 6 })) return "Bring Maya, heavy coats and 6 rations to Foggy Ravine.";
     if (JSON.stringify(path) !== JSON.stringify(TRAIL)) return "The trail is incomplete.";
     if (s.energy < ENERGY.ravine) return "Too tired. Return to camp and rest.";
     spend(s, ENERGY.ravine);
@@ -939,9 +1166,9 @@
     KEY, MANUAL_KEY, names, recipes, quests, places, place, beatTitles, TRAIL, CIRCUIT,
     fresh, validate, read, write, random, add, note, can, pay, list, tick, clamp, progress,
     objective, missing, missingText, actionsFor, act, use, talk, rest, craft, recipeLock, travel, travelLock, travelHours,
-    fight, discover, signal, search, objectVisible, objectReason, sceneObjects, isFound, foundCount, searched, repeatable, ENERGY, DAILY_LIMIT, searchCost,
+    fight, discover, signal, search, objectVisible, objectReason, sceneObjects, isFound, foundCount, searched, repeatable, ENERGY, DAILY_LIMIT, CURFEW, searchCost, heavyCoat, huntHero,
     beatScene, beatReady, resolveBeat, ending, dialogue, support,
-    seasonOf, SEASON_LEN, SHELTER_UPGRADES, EXTRA_LEANTO, MAX_LEANTOS, MAX_SURVIVORS, TASKS, housing, bedCount, mainLevel, buildShelter, upgradeShelter,
+    SLOTS, GEAR, FAM, gearOf, warmOf, armorOf, weaponDmg, toolBonus, canHunt, itemDesc, gearLock, craftGear, upgradeGear, equip, unequip, collect, DROPS, guardCount, seasonOf, SEASON_LEN, SHELTER_UPGRADES, EXTRA_LEANTO, MAX_LEANTOS, MAX_SURVIVORS, TASKS, housing, bedCount, mainLevel, buildShelter, upgradeShelter,
     strangerText, strangerOffer, strangerBring, strangerLeave, strangerFlee, strangerAttack, setTask, treat, openGate, makeStranger, survivorsDay,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = root.Rift2;

@@ -45,3 +45,19 @@ Autosave key `echoes-rift-v2`; manual save is separate. v1 saves are not compati
 ## Checks
 
 `node --test tests/*.test.cjs` runs 40 rule tests, including a full campaign playthrough from first shelter to the ending.
+
+## Update 5: health, hunting, tanning and gear
+- Sickness is a separate red bar under a survivor's health. It fills each day while they are sick; once full, health starts dropping. Injuries cost health every day until treated.
+- Chores can injure or sicken survivors. Cold, hunger, no bed and no fire raise the odds; warm clothing, weapons and armor lower them.
+- Tend the injured: healers treat survivors who are injured, under 50% health or sick, two patients per healer. 1 herb for injuries and low health, 2 herbs for sickness, only while herbs last.
+- New chores: Hunt (needs a spear or axe), Tan hides and sew (needs a tanning rack), Cook and preserve (needs a burning fire), Guard the camp (less damage from defense waves), Haul water.
+- Animals drop raw meat, hides, claws and sometimes a pelt. Collect them after the fight. Tan hides into leather at a tanning rack, then craft clothing in the Gear workshop.
+- Gear: shirt, pants, shoes, gloves, coat, tool and weapon slots for you, Maya and every survivor (children can wear clothes only). Clothing and tools upgrade through tiers. Heavy coats on you and Maya also satisfy the Glacier ravine coat requirement. Open Gear and equipment, or Check on survivors, at camp.
+
+## Update 6: curfew, forced sleep, gear art
+- Be back at camp by 10 PM. A warning appears at 8 PM. If you are still out at 10 PM you are dragged home cold (-10 warmth). You cannot leave camp when the trip would end after dusk.
+- 10 PM to midnight at camp: only check on survivors, gear, craft, talk, or rest. At midnight you fall asleep for 8 hours and wake at 8 AM with health and energy restored. Rest by the fire to pass time and gain energy.
+- The cheat menu has "No 10 PM curfew or forced sleep" for testing.
+- Heavy winter coats are no longer a recipe. Coats are gear: make a Light coat, upgrade it to a Heavy coat, and equip one on you and one on Maya. The Glacier and ravine requirements use these.
+- Hunt game (forest, grove, river) needs a spear or axe equipped and brings meat, hides and sometimes claws.
+- All gear has drawn vector icons (assets/gear-icons.js). A reference sheet is in assets/art/gear-sheet.png.

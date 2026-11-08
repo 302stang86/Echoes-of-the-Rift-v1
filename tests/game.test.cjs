@@ -3,6 +3,9 @@ const assert = require("node:assert/strict");
 globalThis.window = globalThis;
 require("../assets/scene-data.js");
 const R = require("../assets/game.js");
+// Most tests are about other rules, so they run without the 10 PM curfew. The curfew tests turn it back on.
+const _fresh = R.fresh;
+R.fresh = (n) => { const s = _fresh(n); s.cheats.noCurfew = true; return s; };
 
 const newGame = (safe = true) => {
   const s = R.fresh("Leo");
@@ -368,7 +371,7 @@ test("the whole campaign is completable through the public rules", () => {
   R.travel(s, "camp");
   R.travel(s, "forest"); grab("forest", 2);
   R.travel(s, "camp");
-  s.inv.rope = 2; R.craft(s, "coat");
+  s.gear.hero.coat = "coat2"; s.gear.maya.coat = "coat2"; s.flags.coat = true;
   s.inv.food = 6;
   R.travel(s, "ravine");
   assert.match(R.discover(s, [1, 2]), /incomplete/);
@@ -469,7 +472,7 @@ test("survivors without beds lose health, fall sick and can die", () => {
   assert.equal(s.deaths, 1);
   const t = newGame();
   t.flags.shelter = true; t.shelters = [{ level: 0 }, { level: 0 }];
-  const q = addPerson(t); t.inv.food = 100;
+  const q = addPerson(t); t.inv.food = 100; t.inv.log = 100; t.flags.fire = true;
   for (let d = 0; d < 10; d++) { t.hour = 23; R.tick(t, 1); }
   assert.equal(t.survivors.length, 1);
   assert.ok(q.health >= 90, "a bed keeps them well");
@@ -502,8 +505,8 @@ test("a healer treats the injured and a fire tender saves a log", () => {
   const s = newGame();
   s.shelters = [{ level: 0 }, { level: 0 }, { level: 0 }, { level: 0 }];
   addPerson(s, { id: "h", task: "heal" }); const hurt = addPerson(s, { id: "i", name: "Beth", injured: true, health: 40 });
-  addPerson(s, { id: "f", name: "Rosa", task: "fire" });
-  s.flags.fire = s.flags.fireBuilt = true; s.inv = { food: 20, log: 10 };
+  addPerson(s, { id: "f", name: "Rosa", task: "fire", gear: { coat: "coat3" } });
+  s.flags.fire = s.flags.fireBuilt = true; s.inv = { food: 20, log: 10, herb: 5 };
   s.hour = 23; R.tick(s, 1);
   assert.equal(hurt.injured, false);
   assert.equal(s.inv.log, 9, "tender: 1 log instead of 2");
@@ -602,4 +605,156 @@ test("older version 2 saves load with the new fields filled in", () => {
   assert.ok(R.validate(s));
   assert.deepEqual(s.shelters, [{ level: 0 }]);
   assert.equal(s.survivors.length, 0);
+});
+
+/* ---- update 5: sickness bar, drops, tanning, gear ---- */
+const camp5 = () => { const s = newGame(); s.flags.shelter = true; s.flags.fire = s.flags.fireBuilt = true; s.shelters = [{ level: 0 }, { level: 0 }, { level: 0 }, { level: 0 }]; s.inv = { food: 50, log: 50 }; s.energy = 100; s.withMaya = true; return s; };
+const night5 = (s) => { s.hour = 23; R.tick(s, 1); };
+
+test("sickness is its own red bar: health only drops once the bar is full", () => {
+  const s = camp5(); const p = addPerson(s, { sick: true, ill: 10, gear: { coat: "coat3" } });
+  night5(s); assert.ok(p.ill > 10 && p.ill < 100 && p.health >= 90, "bar fills, health holds");
+  for (let i = 0; i < 6; i++) night5(s);
+  assert.equal(p.ill, 100);
+  const h = p.health; night5(s);
+  assert.ok(p.health < h, "full bar drains health");
+});
+
+test("healers treat health under 50%, injuries and sickness; sickness costs twice the herbs", () => {
+  const s = camp5(); addPerson(s, { id: "h", task: "heal", gear: { coat: "coat3" } });
+  const low = addPerson(s, { id: "a", name: "Beth", health: 40, gear: { coat: "coat3" } });
+  const sick = addPerson(s, { id: "b", name: "Rosa", sick: true, ill: 50, gear: { coat: "coat3" } });
+  s.inv.herb = 3; night5(s);
+  assert.equal(s.inv.herb, 0, "1 herb for health + 2 for sickness");
+  assert.equal(sick.sick, false); assert.ok(low.health > 40);
+  const t = camp5(); addPerson(t, { id: "h", task: "heal", gear: { coat: "coat3" } });
+  const u = addPerson(t, { id: "b", name: "Rosa", sick: true, ill: 50, gear: { coat: "coat3" } });
+  t.inv.herb = 1; night5(t);
+  assert.equal(u.sick, true, "not enough herbs for sickness"); assert.equal(t.inv.herb, 1);
+  assert.match(R.treat(t, "b"), /need 2/);
+});
+
+test("a killed animal leaves meat, hides and claws to collect", () => {
+  const s = newGame(); s.quest = 1; s.encounter = { name: "Dire wolf", hp: 1, max: 45, damage: 1 };
+  R.fight(s, "attack");
+  assert.ok(s.drop && s.drop.loot.meat && s.drop.loot.hide && s.drop.loot.claw);
+  assert.match(R.collect(s), /Collected/);
+  assert.equal(s.drop, null); assert.ok(s.inv.meat >= 3 && s.inv.hide >= 2 && s.inv.claw >= 2);
+  s.encounter = { name: "Cave bear", hp: 1, max: 65, damage: 1 }; R.fight(s, "attack");
+  assert.equal(s.drop.loot.pelt, 1);
+  R.act(s, "nap", "nap"); assert.equal(s.drop, null, "other actions auto-collect");
+});
+
+test("hides are tanned into leather, which makes clothing that can be upgraded", () => {
+  const s = camp5(); s.inv.hide = 3; s.inv.leaf = 10; s.inv.rope = 5; s.inv.pelt = 1;
+  assert.match(R.craft(s, "leather"), /tanning rack/);
+  s.inv.log = 20; R.craft(s, "tanrack"); s.energy = 100;
+  R.craft(s, "leather"); R.craft(s, "leather"); assert.equal(s.inv.leather, 2);
+  assert.match(R.craftGear(s, "shirt"), /Crafted/); assert.equal(s.gearBag.shirt1, 1);
+  s.inv.leather = 6; s.energy = 100;
+  assert.match(R.upgradeGear(s, "bag:shirt1"), /Leather shirt/);
+  assert.equal(s.gearBag.shirt2, 1); assert.equal(s.gearBag.shirt1, undefined);
+  s.energy = 100; s.inv.leather = 10; s.inv.pelt = 1; assert.match(R.upgradeGear(s, "bag:shirt2"), /Fur-lined/);
+  assert.match(R.upgradeGear(s, "bag:shirt3"), /Fully/);
+});
+
+test("equipping gear: slots, swaps, children, warmth and the winter coat flag", () => {
+  const s = camp5(); const kid = addPerson(s, { id: "k", name: "Pip", child: true });
+  s.gearBag = { shirt1: 1, shirt2: 1, spear1: 1, coat2: 3, axe1: 1 };
+  R.equip(s, "hero", "shirt1"); R.equip(s, "hero", "shirt2");
+  assert.equal(R.gearOf(s, "hero").shirt, "shirt2"); assert.equal(s.gearBag.shirt1, 1, "old shirt goes back to the pack");
+  assert.match(R.equip(s, "k", "spear1"), /too young/); assert.match(R.equip(s, "k", "coat2"), /equipped/);
+  assert.equal(R.warmOf(R.gearOf(s, "hero")), 2);
+  assert.ok(!s.flags.coat);
+  R.equip(s, "hero", "coat2"); R.equip(s, "maya", "coat2" ); 
+  assert.equal(s.flags.coat, true, "heavy coats on you and Maya satisfy the ravine requirement");
+  R.unequip(s, "hero", "shirt"); assert.equal(s.gearBag.shirt2, 1);
+  s.loc = "forest"; assert.match(R.equip(s, "hero", "axe1"), /camp/);
+});
+
+test("new chores: hunting needs a weapon, tanning needs a rack, cooks smoke meat, water haulers fill bottles", () => {
+  const s = camp5(); const w = addPerson(s, { id: "w", task: "idle", gear: { coat: "coat3" } });
+  assert.match(R.setTask(s, "w", "hunt"), /needs a spear/);
+  assert.match(R.setTask(s, "w", "tan"), /tanning rack/);
+  w.gear.weapon = "spear2"; assert.match(R.setTask(s, "w", "hunt"), /Hunt/);
+  night5(s); assert.ok((s.inv.meat || 0) >= 3, "hunt brings meat");
+  const fit = () => { w.sick = false; w.injured = false; w.health = 90; };
+  fit(); w.task = "cook"; const m = s.inv.meat; night5(s);
+  assert.ok(s.inv.meat < m && s.inv.food > 50, "cook smokes meat into rations");
+  fit(); s.flags.tanrack = true; s.inv.hide = 3; w.task = "tan"; night5(s); assert.equal(s.inv.leather, 2);
+  fit(); w.task = "water"; night5(s); assert.ok(s.inv.water >= 4);
+});
+
+test("tools and clothing change yields and cold", () => {
+  const s = camp5(); const w = addPerson(s, { id: "w", task: "wood", gear: { tool: "axe2", coat: "coat3" } });
+  s.inv.log = 0; s.flags.fire = false; night5(s); assert.ok(s.inv.log >= 8, "axe adds logs");
+  const t = newGame(); t.loc = "forest"; t.flags.shelter = true; t.inv = {};
+  const base = R.actionsFor(t).find((a) => a.id === "timber").label ? 1 : 0;
+  t.gear.hero.tool = "axe1"; R.act(t, "gather", "timber"); const g1 = t.inv.log;
+  const u = newGame(); u.loc = "forest"; u.flags.shelter = true; u.inv = {}; R.act(u, "gather", "timber");
+  assert.equal(g1 - u.inv.log, 2, "stone axe: +2 logs");
+});
+
+test("older saves gain gear, drop and sickness fields", () => {
+  const s = newGame(); delete s.gearBag; delete s.gear; delete s.drop;
+  s.survivors = [{ id: "x", name: "Mara", sex: "F", child: false, health: 80, injured: false, sick: true, task: "idle", joined: 1 }];
+  R.validate(s); assert.ok(s.gearBag && s.gear.hero && s.gear.maya && s.drop === null);
+  assert.equal(s.survivors[0].ill, 20); assert.deepEqual(s.survivors[0].gear, {});
+});
+
+/* ---- update 6: curfew, forced sleep, hunting ---- */
+const dusk = () => { const s = R.fresh("Leo"); s.cheats.noCurfew = false; s.cheats.safeTravel = true; s.flags.shelter = true; s.shelters = [{ level: 0 }]; s.inv.log = 20; return s; };
+
+test("you must be back at camp by 10 PM or you are dragged home cold", () => {
+  const s = dusk(); s.loc = "forest"; s.hour = 19; s.warmth = 80;
+  R.tick(s, 1); assert.match(s.log.join(" "), /Be back at camp by 10 PM/);
+  R.tick(s, 2); assert.equal(s.loc, "camp");
+  assert.ok(s.warmth < 80); assert.match(s.log.join(" "), /stumble back/);
+  const t = dusk(); t.loc = "forest"; t.hour = 20; t.warmth = 90; t.energy = 100;
+  assert.match(R.travel(t, "camp"), /Arrived/); assert.equal(t.loc, "camp");
+  assert.ok(!/stumble/.test(t.log.join(" ")), "walking home in time is fine");
+});
+
+test("it is too late to head out after dusk", () => {
+  const s = dusk(); s.hour = 20;
+  assert.match(R.travel(s, "forest"), /too late/);
+  s.hour = 17; assert.match(R.travel(s, "forest"), /Arrived/);
+  s.hour = 20; assert.match(R.travel(s, "grove"), /Dusk is near/);
+});
+
+test("from 10 PM to midnight camp is limited to survivors, crafting, talking and rest", () => {
+  const s = dusk(); s.hour = 22;
+  const acts = R.actionsFor(s), blocked = (type) => acts.filter((a) => a.type === type).every((a) => a.disabled);
+  assert.ok(blocked("refill")); assert.ok(!blocked("talk") && !blocked("build") && !blocked("nap") && !blocked("rest"));
+  s.survivors.push({ id: "a", name: "Mara", sex: "F", child: false, health: 90, injured: false, sick: false, ill: 0, gear: {}, task: "idle", joined: 1 });
+  assert.ok(!R.actionsFor(s).find((a) => a.type === "survivors").disabled);
+  assert.match(R.act(s, "refill", "refill"), /too dark/i);
+});
+
+test("at midnight you are forced into eight hours of sleep", () => {
+  const s = dusk(); s.hour = 23; s.day = 3; s.energy = 20; s.health = 50; s.food = s.water = s.warmth = 100; s.flags.fire = true;
+  R.act(s, "nap", "nap");
+  assert.equal(s.hour, 8); assert.equal(s.day, 4);
+  assert.equal(s.energy, 100); assert.ok(s.health >= 80);
+  assert.match(s.log.join(" "), /sleep until morning/);
+  const t = dusk(); t.hour = 18; t.energy = 10; R.act(t, "rest", "rest");
+  assert.equal(t.hour, 2, "ordinary sleep is not doubled"); assert.equal(t.energy, 100);
+});
+
+test("resting by the fire skips time before dusk", () => {
+  const s = dusk(); s.hour = 12; s.energy = 40;
+  for (let i = 0; i < 4; i++) R.act(s, "nap", "nap");
+  assert.equal(s.hour, 16); assert.equal(s.energy, 100);
+});
+
+test("hunting: needs a weapon, brings meat and hides, and the winter coat recipe is gone", () => {
+  const s = newGame(); s.quest = 1; s.loc = "forest";
+  assert.ok(R.actionsFor(s).find((a) => a.type === "hunt").disabled);
+  s.gear.hero.weapon = "spear1";
+  assert.match(R.act(s, "hunt", "hunt"), /Collected/);
+  assert.ok(s.inv.meat >= 2 && s.inv.hide >= 1);
+  assert.equal(R.recipes.coat, undefined);
+  const o = R.fresh("Leo"); o.flags.coat = true; o.gear = undefined; R.validate(o);
+  assert.equal(o.gear.hero.coat, "coat2", "old winter coats become gear");
+  const q = newGame(); q.quest = 4; assert.match(R.objective(q).text, /tanning rack/);
 });
